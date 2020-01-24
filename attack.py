@@ -417,6 +417,8 @@ class Attack():
                 ax[k].plot(x[self.params.predict_start:],
                            zero_mu_chosen[k], color='brown')
 
+                print(self.params.predict_start)
+
                 ax[k].plot(x[:self.params.predict_start], label_plot[k, :self.params.predict_start]*(1+best_perturbation["double"][tolerance][random_sample]), color='y')
                 ax[k].plot(x[:self.params.predict_start:], label_plot[k, :self.params.predict_start] * (1 + best_perturbation["zero"][tolerance][random_sample]), color='purple')
 
