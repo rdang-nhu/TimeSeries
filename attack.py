@@ -438,7 +438,7 @@ class Attack():
 
     def attack(self):
 
-        for estimator in ["ours","naive"]:
+        for estimator in ["ours"]:
 
             # Choose a batch on with to plot
             # plot_batch = np.random.randint(len(test_loader) - 1)
