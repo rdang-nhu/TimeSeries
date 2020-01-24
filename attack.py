@@ -274,6 +274,7 @@ class Attack():
             perturbed_output_sigma = {}
 
             modes = ["double", "zero"]
+            targets = {}
 
             for mode in modes:
 
@@ -297,6 +298,7 @@ class Attack():
                                                  cell)
 
                     target = attack_module.generate_target(labels,mode)
+                    targets[mode] = target
 
                     optimizer = optim.Adam([attack_module.perturbation], lr=self.params.learning_rate)
 
@@ -349,14 +351,15 @@ class Attack():
 
 
             return original_mu,original_sigma,best_c, best_perturbation, \
-                   best_distance, perturbed_output_mu, perturbed_output_sigma
+                   best_distance, perturbed_output_mu, perturbed_output_sigma, targets
 
 
 
 
     def plot_batch(self,original_mu,original_sigma,
                    perturbed_output_mu, perturbed_output_sigma,
-                   best_c,best_perturbation,best_distance, labels,):
+                   best_c,best_perturbation,best_distance, labels,
+                   targets):
 
 
         batch_size = original_mu.shape[0]
@@ -378,6 +381,8 @@ class Attack():
         label_plot = labels[random_sample].data.cpu().numpy()
         original_mu_chosen = original_mu[random_sample].data.cpu().numpy()
         original_sigma_chosen = original_sigma[random_sample].data.cpu().numpy()
+        plot_target_double = targets["double"][random_sample].data.cpu().numpy()
+        plot_target_zero = targets["zero"][random_sample].data.cpu().numpy()
 
 
         #plot_metrics = {_k: _v[combined_sample] for _k, _v in sample_metrics.items()}
@@ -412,8 +417,11 @@ class Attack():
                 ax[k].plot(x[self.params.predict_start:],
                            zero_mu_chosen[k], color='brown')
 
-                ax[k].plot(x, label_plot[k, :self.params.predict_start]*(1+best_perturbation["double"][tolerance][random_sample]), color='y')
-                ax[k].plot(x, label_plot[k, :self.params.predict_start] * (1 + best_perturbation["zero"][tolerance][random_sample]), color='purple')
+                ax[k].plot(x[:self.params.predict_start], label_plot[k, :self.params.predict_start]*(1+best_perturbation["double"][tolerance][random_sample]), color='y')
+                ax[k].plot(x[:self.params.predict_start:], label_plot[k, :self.params.predict_start] * (1 + best_perturbation["zero"][tolerance][random_sample]), color='purple')
+
+                ax[k].axhline(plot_target_double, color='orange', linestyle='dashed')
+                ax[k].axhline(plot_target_zero, color='orange', linestyle='dashed')
 
             ax[k].plot(x, label_plot[k, :], color='r')
             ax[k].axvline(self.params.predict_start, color='g', linestyle='dashed')
@@ -456,7 +464,7 @@ class Attack():
                 #print("label",labels[0,:])
 
                 original_mu,original_sigma,best_c,best_perturbation,best_distance,\
-                    perturbed_output_mu, perturbed_output_sigma = \
+                    perturbed_output_mu, perturbed_output_sigma,targets = \
                     self.attack_batch(test_batch,id_batch,v_batch,test_labels,hidden,cell,estimator)
 
                 if i == plot_batch:
@@ -468,7 +476,8 @@ class Attack():
                                     best_c,
                                     best_perturbation,
                                     best_distance,
-                                    labels)
+                                    labels,
+                                    targets)
 
 
             # Average the performance across batches
