@@ -207,6 +207,7 @@ class Attack():
 
 
         if i % 100 == 0:
+            print("Iteration", i)
             self.print(i,norm,distance,loss,norm_per_sample.shape[0])
 
         # Apply one step of optimizer
@@ -308,7 +309,6 @@ class Attack():
                     # Iterate steps
                     for i in range(self.params.n_iterations):
 
-                        print("Iteration",i)
 
                         if estimator == "ours":
                             self.attack_step_ours(attack_module, optimizer, i, target)
