@@ -58,7 +58,7 @@ class AttackLoss(nn.Module):
         output = output[:,-1]
 
         loss_function = nn.MSELoss(reduction="none")
-        distance_per_sample = loss_function(output, target).sum(1)
+        distance_per_sample = loss_function(output, target)
 
         distance = distance_per_sample.sum(0)
 
