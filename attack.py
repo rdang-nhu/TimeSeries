@@ -419,7 +419,6 @@ class Attack():
 
                 double_pert = (1+best_perturbation["double"][tolerance][:,random_sample])
                 zero_pert = (1 + best_perturbation["zero"][tolerance][:,random_sample])
-                print(double_pert.shape)
 
                 ax[k].plot(x[:self.params.predict_start], label_plot[k, :self.params.predict_start]*double_pert[:self.params.predict_start,k], color='y')
                 ax[k].plot(x[:self.params.predict_start:], label_plot[k, :self.params.predict_start] * zero_pert[:self.params.predict_start,k], color='purple')
@@ -454,24 +453,25 @@ class Attack():
             # labels ([batch_size, train_window]): z_{1:T}.
             for i, (test_batch, id_batch, v, labels) in enumerate(tqdm(self.test_loader)):
 
-                # Prepare batch data
-                test_batch = test_batch.permute(1, 0, 2).to(torch.float32).to(params.device)
-                id_batch = id_batch.unsqueeze(0).to(params.device)
-                v_batch = v.to(torch.float32).to(params.device)
-                test_labels = labels.to(torch.float32).to(params.device)[:,-1]
-                batch_size = test_batch.shape[1]
-                hidden = model.init_hidden(batch_size)
-                cell = model.init_cell(batch_size)
-
-                print("Sample", i)
-                #print("test batch",v_batch[0, 0] * test_batch[:,0,0] + v_batch[0, 1])
-                #print("label",labels[0,:])
-
-                original_mu,original_sigma,best_c,best_perturbation,best_distance,\
-                    perturbed_output_mu, perturbed_output_sigma,targets = \
-                    self.attack_batch(test_batch,id_batch,v_batch,test_labels,hidden,cell,estimator)
-
                 if i == plot_batch:
+
+                    # Prepare batch data
+                    test_batch = test_batch.permute(1, 0, 2).to(torch.float32).to(params.device)
+                    id_batch = id_batch.unsqueeze(0).to(params.device)
+                    v_batch = v.to(torch.float32).to(params.device)
+                    test_labels = labels.to(torch.float32).to(params.device)[:,-1]
+                    batch_size = test_batch.shape[1]
+                    hidden = model.init_hidden(batch_size)
+                    cell = model.init_cell(batch_size)
+
+                    print("Sample", i)
+                    #print("test batch",v_batch[0, 0] * test_batch[:,0,0] + v_batch[0, 1])
+                    #print("label",labels[0,:])
+
+                    original_mu,original_sigma,best_c,best_perturbation,best_distance,\
+                        perturbed_output_mu, perturbed_output_sigma,targets = \
+                        self.attack_batch(test_batch,id_batch,v_batch,test_labels,hidden,cell,estimator)
+
 
                     self.plot_batch(original_mu,
                                     original_sigma,
