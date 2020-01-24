@@ -206,3 +206,8 @@ def final_metrics(raw_metrics, sampling=False):
         summary_metric['rou90'] = raw_metrics['rou90'][0] / raw_metrics['rou90'][1]
         summary_metric['rou50'] = raw_metrics['rou50'][0] / raw_metrics['rou50'][1]
     return summary_metric
+
+def convert_from_tensor(var):
+    if isinstance(var, torch.Tensor):
+        var = var.cpu().numpy()
+    return var

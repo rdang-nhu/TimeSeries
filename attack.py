@@ -3,7 +3,8 @@ import logging
 import os
 
 import numpy as np
-import torch
+import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
 
@@ -30,11 +31,131 @@ parser.add_argument('--restore-file', default='best',
 # Attack parameters
 parser.add_argument('--c',nargs='+', type=float, default=[0.01, 0.1, 1, 10, 100],
                         help='list of c coefficients (see Carlini et al.)')
+parser.add_argument('--lr', type=float, default=0.001,
+                        help='learning rate')
+parser.add_argument('--batch_size',nargs='+', type=int, default=50,
+                        help='Batch size for perturbation generation')
 parser.add_argument('--n_iterations', type=int, default=1000,
                         help='Number of iterations for attack')
-parser.add_argument('--tolerance', nargs='+',type=float, default=0.1,help='Max perturbation L2 norm')
+parser.add_argument('--tolerance', nargs='+',type=float, default=[0.01, 0.1, 1],
+                    help='Max perturbation L2 norm')
 
 parser.add_argument('--debug', action="store_true", help='Debug mode')
+
+
+class AttackLoss(nn.Module):
+
+    def __init__(self, params,c):
+        super(AttackLoss, self).__init__()
+        self.c = c
+        self.device = params.device
+
+    # perturbation has shape (nSteps,)
+    # output has shape (nSteps,batch_size,output_dim)
+    # for the moment, target has shape (batch_size,output_dim)
+    def forward(self, perturbation, output, target):
+
+        #print("perturb",perturbation.shape)
+        #print("output",output.shape)
+        #print("target",target.shape)
+
+        loss_function = nn.MSELoss(reduction="none")
+        distance_per_sample = loss_function(output, target).sum(1)
+
+        #print("distance sample",distance_per_sample.shape)
+
+        distance = distance_per_sample.sum(0)
+
+
+        zero = torch.zeros(perturbation.shape).to(self.device)
+        norm_per_sample = loss_function(perturbation, zero).sum(0)
+
+        #print("norm sample", norm_per_sample.shape)
+        norm = norm_per_sample.sum(0)
+
+        loss_per_sample = norm_per_sample + self.c * distance_per_sample
+        loss = norm + self.c * distance
+
+        #print("loss",loss.shape)
+
+        return norm_per_sample,distance_per_sample,loss_per_sample,norm,distance,loss
+
+class AttackModule(nn.Module):
+
+    def __init__(self, model, params, c, data,id_batch, v_batch, hidden, cell):
+
+        super(AttackModule, self).__init__()
+
+
+        self.model = model
+        self.params = params
+        self.c = c
+        self.data = data
+        self.id_batch = id_batch
+        self.v_batch = v_batch
+        self.hidden = hidden
+        self.cell = cell
+        self.n_inputs = data.shape[1]
+        self.attack_loss = AttackLoss(params,c)
+
+
+        # Initialize perturbation
+        self.perturbation = nn.Parameter(torch.zeros(self.data.shape[:2], device=self.params.device))
+
+    def generate_target(self,labels,mode):
+
+        if mode == "double":
+            target = 2*labels
+        elif mode == "zero":
+            target = torch.zeros(labels.shape,device=self.params.device)
+        else:
+            raise Exception("No such mode")
+
+        return target
+
+    # Returns mean and std
+    def forward(self):
+
+        perturbed_data = torch.zeros(self.data.shape).to(self.params.device)
+        perturbed_data[:,:,0] = self.data[:,:,0]  * (1 + self.perturbation)
+        perturbed_data[:,:,1:] = self.data[:,:,1:]
+
+        samples, sample_mu, sample_sigma = model.test(perturbed_data,
+                                                      self.v_batch,
+                                                      self.id_batch,
+                                                      self.hidden,
+                                                      self.cell,
+                                                      sampling=True,
+                                                      n_samples=self.params.batch_size)
+
+        return samples,sample_mu,sample_sigma
+
+    # Not clear yet how to compute that
+    def forward_naive(self):
+
+        perturbed_data = torch.zeros(self.data.shape).to(self.params.device)
+        perturbed_data[:, :, 0] = self.data[:, :, 0] * (1 + self.perturbation)
+        perturbed_data[:, :, 1:] = self.data[:, :, 1:]
+
+        samples, sample_mu, sample_sigma = model.test(self.data,
+                                                      self.v_batch,
+                                                      self.id_batch,
+                                                      self.hidden,
+                                                      self.cell,
+                                                      sampling=True,
+                                                      n_samples=self.params.batch_size)
+
+        # Forward pass on all samples
+        aux_estimate = torch.zeros(batch,device=self.model.device)
+        for i in range(n_samples):
+            log_prob = self.model.forward_log_prob()
+
+            aux_estimate += outputs[i, :,self.args.steps-1].squeeze(1)*log_prob
+
+        aux_estimate /= float(n_samples)
+        aux_estimate = aux_estimate.sum(0)
+
+        return sample_mu,aux_estimate
 
 class Attack():
     '''Attack the model.
@@ -57,22 +178,87 @@ class Attack():
         self.model.eval()
         self.max_pert_len = len(params.tolerance)
 
+    def print(self,i,norm,distance,loss):
 
-    def attack_batch(self, data):
+        print(i,norm.detach().item(),distance.detach().item(),loss.detach().item())
 
-            shape = (self.max_pert_len,) + data.shape
-            best_perturbation = {"buy": np.zeros(shape),
-                                 "sell": np.zeros(shape)}
+    def project_perturbation(self,perturbation):
+
+        # TODO: implement to be consistent with way perturbation is applied
+        return perturbation
+
+    def attack_step_ours(self, attack_module, optimizer, i, target):
+
+        attack_module.zero_grad()
+
+        # with torch.autograd.detect_anomaly():
+        _,prediction,_ = attack_module()
+
+        norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
+            attack_module.attack_loss(attack_module.perturbation, prediction, target)
+
+        # Differentiate loss with respect to input
+        loss.backward()
+
+        print("Grad",attack_module.perturbation.grad)
+
+        self.print(i,norm,distance,loss)
+
+        # Apply one step of optimizer
+        optimizer.step()
+
+        self.project_perturbation(attack_module)
+
+    def attack_step_naive(self, attack_module, optimizer, i, target):
+
+        attack_module.zero_grad()
+
+        mean, aux_estimate = attack_module.forward_naive()
+
+        aux_estimate.backward()
+
+        # Compute the derivative of the loss with respect to the mean
+        mean.requires_grad = True
+        attack_module.perturbation.requires_grad = False
+        norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
+            attack_module.attack_loss(attack_module.perturbation, mean, target)
+
+        # This propagates the gradient to the mean
+        loss.backward()
+
+        # Compute grad of aux estimate
+
+        # Multiply the two, and set it in perturbation
+        attack_module.perturbation.grad *= mean.grad.unsqueeze(-1)
+
+        # Compute the derivative of the loss with respect to the norm
+        mean.requires_grad = False
+        attack_module.perturbation.requires_grad = True
+        norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
+            attack_module.attack_loss(attack_module.perturbation, mean, target)
+
+        # This propagates the gradient to the norm
+        loss.backward()
+
+
+        # Apply one step of optimizer
+        optimizer.step()
+
+        self.project_perturbation(attack_module)
+
+    def attack_batch(self,data,id_batch,v_batch,labels,hidden,cell,estimator):
+
+            shape = (self.max_pert_len,) + data.shape[:2]
+            best_perturbation = {"double": np.zeros(shape),
+                                 "zero": np.zeros(shape)}
 
             c_shape = (self.max_pert_len, data.shape[1])
-            best_c = {"buy": np.zeros(c_shape),
-                      "sell": np.zeros(c_shape)}
-            best_distance = {"buy": np.full(c_shape, np.inf),
-                             "sell": np.full(c_shape, np.inf)}
+            best_c = {"double": np.zeros(c_shape),
+                      "zero": np.zeros(c_shape)}
+            best_distance = {"double": np.full(c_shape, np.inf),
+                             "zero": np.full(c_shape, np.inf)}
 
-            percentage = {}
-
-            modes = ["buy", "sell"]
+            modes = ["double", "zero"]
 
             for mode in modes:
                 # Loop on values of c to find successful attack with minimum perturbation
@@ -82,18 +268,27 @@ class Attack():
                     c = self.params.c[i]
 
                     # Update the lines
-                    attack_module = AttackModule(self.model, self.params, c, data)
+                    attack_module = AttackModule(self.model,
+                                                 self.params,
+                                                 c,
+                                                 data,
+                                                 id_batch,
+                                                 v_batch,
+                                                 hidden,
+                                                 cell)
 
-                    target, mean_output = attack_module.generate_target()
+                    target = attack_module.generate_target(labels,mode)
 
-                    optimizer = optim.RMSprop([attack_module.perturbation], lr=self.args.learning_rate)
+                    optimizer = optim.Adam([attack_module.perturbation], lr=self.params.learning_rate)
 
                     # Iterate steps
                     for i in range(self.params.n_iterations):
 
-                        if self.estimator == "ours":
+                        print("Iteration",i)
+
+                        if estimator == "ours":
                             self.attack_step_ours(attack_module, optimizer, i, target)
-                        elif self.estimator == "naive":
+                        elif estimator == "naive":
                             self.attack_step_naive(attack_module, optimizer, i, target)
                         else:
                             raise Exception("No such estimator")
@@ -101,7 +296,9 @@ class Attack():
                     # Evaluate the attack
                     # Run full number of samples on perturbed input to obtain perturbed output
                     with torch.no_grad():
-                        perturbed_output = attack_module(n_samples=self.args.samples)
+                        # TODO:
+                        print("sample times",self.params.sample_times)
+                        _,perturbed_output,_ = attack_module()
 
                         norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
                             attack_module.attack_loss(attack_module.perturbation, perturbed_output, target)
@@ -112,7 +309,7 @@ class Attack():
                         numpy_perturbation = utils.convert_from_tensor(attack_module.perturbation.data)
 
                         for l in range(self.max_pert_len):
-                            indexes_best_c = np.logical_and(numpy_norm <= self.args.max_pert[l],
+                            indexes_best_c = np.logical_and(numpy_norm <= self.params.tolerance[l],
                                                             numpy_distance < best_distance[mode][l])
 
                             best_perturbation[mode][l][:, indexes_best_c] = \
@@ -122,60 +319,101 @@ class Attack():
                             best_c[mode][l, indexes_best_c] = c
 
                 with torch.no_grad():
-                    if self.target_type == "binary":
-                        percentage[mode] = []
-                        for l in range(self.max_pert_len):
-                            # Check if 95% confidence interval is in "buy" or "sell"
-                            attack_module.perturbation.data = \
-                                torch.tensor(best_perturbation[mode][l],
-                                             device=attack_module.model.device).float()
-                            perturbed_output, sem = attack_module(n_samples=self.args.samples, std=True)
 
-                            percentage[mode].append(self.compute_metrics(mode, perturbed_output, sem, mean_output))
+                    for l in range(self.max_pert_len):
+                        # Check if 95% confidence interval is in "buy" or "sell"
+                        attack_module.perturbation.data = \
+                            torch.tensor(best_perturbation[mode][l],
+                                         device=self.params.device).float()
+                        _,perturbed_output, _ = attack_module()
 
-            return best_c, best_perturbation, best_distance, percentage
 
+            return best_c, best_perturbation, best_distance
+
+    def plot_batch(self):
+
+        sample_metrics = utils.get_metrics(sample_mu, labels, params.test_predict_start, samples,
+                                           relative=params.relative_metrics)
+
+        # select 10 from samples with highest error and 10 from the rest
+        top_10_nd_sample = (-sample_metrics['ND']).argsort()[:batch_size // 10]  # hard coded to be 10
+        chosen = set(top_10_nd_sample.tolist())
+        all_samples = set(range(batch_size))
+        not_chosen = np.asarray(list(all_samples - chosen))
+        if batch_size < 100:  # make sure there are enough unique samples to choose top 10 from
+            random_sample_10 = np.random.choice(top_10_nd_sample, size=10, replace=True)
+        else:
+            random_sample_10 = np.random.choice(top_10_nd_sample, size=10, replace=False)
+        if batch_size < 12:  # make sure there are enough unique samples to choose bottom 90 from
+            random_sample_90 = np.random.choice(not_chosen, size=10, replace=True)
+        else:
+            random_sample_90 = np.random.choice(not_chosen, size=10, replace=False)
+        combined_sample = np.concatenate((random_sample_10, random_sample_90))
+
+        label_plot = labels[combined_sample].data.cpu().numpy()
+        predict_mu = sample_mu[combined_sample].data.cpu().numpy()
+        predict_sigma = sample_sigma[combined_sample].data.cpu().numpy()
+        plot_mu = np.concatenate((input_mu[combined_sample].data.cpu().numpy(), predict_mu), axis=1)
+        plot_sigma = np.concatenate((input_sigma[combined_sample].data.cpu().numpy(), predict_sigma), axis=1)
+        plot_metrics = {_k: _v[combined_sample] for _k, _v in sample_metrics.items()}
+        plot_eight_windows(params.plot_dir, plot_mu, plot_sigma, label_plot, params.test_window,
+                           params.test_predict_start, plot_num, plot_metrics, sample)
 
     def attack(self):
 
+        for estimator in ["ours","naive"]:
 
-        # For each test sample
-        # Test_loader:
-        # test_batch ([batch_size, train_window, 1+cov_dim]): z_{0:T-1} + x_{1:T}, note that z_0 = 0;
-        # id_batch ([batch_size]): one integer denoting the time series id;
-        # v ([batch_size, 2]): scaling factor for each window;
-        # labels ([batch_size, train_window]): z_{1:T}.
-        for i, (test_batch, id_batch, v, labels) in enumerate(tqdm(self.test_loader)):
+            # Choose a batch on with to plot
+            plot_batch = np.random.randint(len(test_loader) - 1)
 
-            print("Sample",i)
-            print(test_batch.shape)
 
-            self.attack_batch(test_batch)
+            # For each test sample
+            # Test_loader:
+            # test_batch ([batch_size, train_window, 1+cov_dim]): z_{0:T-1} + x_{1:T}, note that z_0 = 0;
+            # id_batch ([batch_size]): one integer denoting the time series id;
+            # v ([batch_size, 2]): scaling factor for each window;
+            # labels ([batch_size, train_window]): z_{1:T}.
+            for i, (test_batch, id_batch, v, labels) in enumerate(tqdm(self.test_loader)):
 
-            #
+                # Prepare batch data
+                test_batch = test_batch.permute(1, 0, 2).to(torch.float32).to(params.device)
+                id_batch = id_batch.unsqueeze(0).to(params.device)
+                v_batch = v.to(torch.float32).to(params.device)
+                labels = labels.to(torch.float32).to(params.device)[:,self.params.predict_start:]
+                batch_size = test_batch.shape[1]
+                input_mu = torch.zeros(batch_size, params.test_predict_start, device=params.device)  # scaled
+                input_sigma = torch.zeros(batch_size, params.test_predict_start, device=params.device)  # scaled
+                hidden = model.init_hidden(batch_size)
+                cell = model.init_cell(batch_size)
 
-        # Average the performance across batches
+                print("Sample", i)
+
+                self.attack_batch(test_batch,id_batch,v_batch,labels,hidden,cell,estimator)
+
+                if i == plot_batch:
+
+                    self.plot_batch()
+
+
+            # Average the performance across batches
+
+            # Save results to dataframe
+
+            # Plots some of adversarial samples
 
 
 
     '''
-    with torch.no_grad():
-        plot_batch = np.random.randint(len(test_loader) - 1)
+   
+        
 
         summary_metric = {}
         raw_metrics = utils.init_metrics(sample=sample)
 
         
         # loop
-            test_batch = test_batch.permute(1, 0, 2).to(torch.float32).to(params.device)
-            id_batch = id_batch.unsqueeze(0).to(params.device)
-            v_batch = v.to(torch.float32).to(params.device)
-            labels = labels.to(torch.float32).to(params.device)
-            batch_size = test_batch.shape[1]
-            input_mu = torch.zeros(batch_size, params.test_predict_start, device=params.device)  # scaled
-            input_sigma = torch.zeros(batch_size, params.test_predict_start, device=params.device)  # scaled
-            hidden = model.init_hidden(batch_size)
-            cell = model.init_cell(batch_size)
+            
+           
 
             for t in range(params.test_predict_start):
                 # if z_t is missing, replace it by output mu from the last time step
@@ -187,46 +425,12 @@ class Attack():
                 input_mu[:, t] = v_batch[:, 0] * mu + v_batch[:, 1]
                 input_sigma[:, t] = v_batch[:, 0] * sigma
 
-            if sample:
-                samples, sample_mu, sample_sigma = model.test(test_batch, v_batch, id_batch, hidden, cell,
-                                                              sampling=True)
+            
                 raw_metrics = utils.update_metrics(raw_metrics, input_mu, input_sigma, sample_mu, labels,
                                                    params.test_predict_start, samples, relative=params.relative_metrics)
-            else:
-                sample_mu, sample_sigma = model.test(test_batch, v_batch, id_batch, hidden, cell)
-                raw_metrics = utils.update_metrics(raw_metrics, input_mu, input_sigma, sample_mu, labels,
-                                                   params.test_predict_start, relative=params.relative_metrics)
+            
 
-            if i == plot_batch:
-                if sample:
-                    sample_metrics = utils.get_metrics(sample_mu, labels, params.test_predict_start, samples,
-                                                       relative=params.relative_metrics)
-                else:
-                    sample_metrics = utils.get_metrics(sample_mu, labels, params.test_predict_start,
-                                                       relative=params.relative_metrics)
-                    # select 10 from samples with highest error and 10 from the rest
-                top_10_nd_sample = (-sample_metrics['ND']).argsort()[:batch_size // 10]  # hard coded to be 10
-                chosen = set(top_10_nd_sample.tolist())
-                all_samples = set(range(batch_size))
-                not_chosen = np.asarray(list(all_samples - chosen))
-                if batch_size < 100:  # make sure there are enough unique samples to choose top 10 from
-                    random_sample_10 = np.random.choice(top_10_nd_sample, size=10, replace=True)
-                else:
-                    random_sample_10 = np.random.choice(top_10_nd_sample, size=10, replace=False)
-                if batch_size < 12:  # make sure there are enough unique samples to choose bottom 90 from
-                    random_sample_90 = np.random.choice(not_chosen, size=10, replace=True)
-                else:
-                    random_sample_90 = np.random.choice(not_chosen, size=10, replace=False)
-                combined_sample = np.concatenate((random_sample_10, random_sample_90))
-
-                label_plot = labels[combined_sample].data.cpu().numpy()
-                predict_mu = sample_mu[combined_sample].data.cpu().numpy()
-                predict_sigma = sample_sigma[combined_sample].data.cpu().numpy()
-                plot_mu = np.concatenate((input_mu[combined_sample].data.cpu().numpy(), predict_mu), axis=1)
-                plot_sigma = np.concatenate((input_sigma[combined_sample].data.cpu().numpy(), predict_sigma), axis=1)
-                plot_metrics = {_k: _v[combined_sample] for _k, _v in sample_metrics.items()}
-                plot_eight_windows(params.plot_dir, plot_mu, plot_sigma, label_plot, params.test_window,
-                                   params.test_predict_start, plot_num, plot_metrics, sample)
+            
 
         summary_metric = utils.final_metrics(raw_metrics, sampling=sample)
         metrics_string = '; '.join('{}: {:05.3f}'.format(k, v) for k, v in summary_metric.items())
@@ -288,12 +492,13 @@ if __name__ == '__main__':
 
     utils.set_logger(os.path.join(model_dir, 'eval.log'))
 
-
     params.model_dir = model_dir
     params.plot_dir = os.path.join(model_dir, 'figures')
     params.c = args.c
     params.n_iterations = args.n_iterations
     params.tolerance = args.tolerance
+    params.batch_size = args.batch_size
+    params.learning_rate = args.lr
 
     cuda_exist = torch.cuda.is_available()  # use GPU is available
 

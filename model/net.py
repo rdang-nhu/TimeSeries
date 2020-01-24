@@ -75,19 +75,27 @@ class Net(nn.Module):
     def init_cell(self, input_size):
         return torch.zeros(self.params.lstm_layers, input_size, self.params.lstm_hidden_dim, device=self.params.device)
 
-    def test(self, x, v_batch, id_batch, hidden, cell, sampling=False):
+    def test(self, x, v_batch, id_batch, hidden, cell, sampling=False,n_samples=None):
+
+        if n_samples is None:
+            n_samples = self.params.sample_times
+
         batch_size = x.shape[1]
         if sampling:
-            samples = torch.zeros(self.params.sample_times, batch_size, self.params.predict_steps,
+            samples = torch.zeros(n_samples, batch_size, self.params.predict_steps,
                                        device=self.params.device)
-            for j in range(self.params.sample_times):
+            for j in range(n_samples):
                 decoder_hidden = hidden
                 decoder_cell = cell
                 for t in range(self.params.predict_steps):
                     mu_de, sigma_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
                                                                          id_batch, decoder_hidden, decoder_cell)
-                    gaussian = torch.distributions.normal.Normal(mu_de, sigma_de)
-                    pred = gaussian.sample()  # not scaled
+
+                    mean = torch.zeros(mu_de.shape,device=self.params.device)
+                    dev = torch.ones(mu_de.shape,device=self.params.device)
+
+                    gaussian = torch.distributions.normal.Normal(mean, dev)
+                    pred = mu_de + sigma_de*gaussian.sample()  # not scaled
                     samples[j, :, t] = pred * v_batch[:, 0] + v_batch[:, 1]
                     if t < (self.params.predict_steps - 1):
                         x[self.params.predict_start + t + 1, :, 0] = pred
