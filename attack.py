@@ -288,6 +288,7 @@ class Attack():
                 for i in range(len(self.params.c)):
 
                     c = self.params.c[i]
+                    print("c",c)
 
                     # Update the lines
                     attack_module = AttackModule(self.model,
