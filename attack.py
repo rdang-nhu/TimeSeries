@@ -189,9 +189,11 @@ class Attack():
 
         self.max_pert_len = len(params.tolerance)
 
-    def print(self,i,norm,distance,loss):
+    def print(self,i,norm,distance,loss,batch):
 
-        print(i,norm.detach().item(),distance.detach().item(),loss.detach().item())
+        print(i,norm.detach().item()/batch,
+              distance.detach().item()/batch,
+              loss.detach().item()/batch)
 
     def project_perturbation(self,perturbation):
 
@@ -211,7 +213,7 @@ class Attack():
         # Differentiate loss with respect to input
         loss.backward()
 
-        self.print(i,norm,distance,loss)
+        self.print(i,norm,distance,loss,norm_per_sample.shape[0])
 
         # Apply one step of optimizer
         optimizer.step()
