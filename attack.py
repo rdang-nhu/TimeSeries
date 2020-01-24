@@ -417,12 +417,12 @@ class Attack():
                 ax[k].plot(x[self.params.predict_start:],
                            zero_mu_chosen[k], color='brown')
 
-                double_pert = (1+best_perturbation["double"][tolerance][random_sample][:,k])
-                zero_pert = (1 + best_perturbation["zero"][tolerance][random_sample][:,k])
+                double_pert = (1+best_perturbation["double"][tolerance][:,random_sample])
+                zero_pert = (1 + best_perturbation["zero"][tolerance][:,random_sample])
                 print(double_pert.shape)
 
-                ax[k].plot(x[:self.params.predict_start], label_plot[k, :self.params.predict_start]*double_pert, color='y')
-                ax[k].plot(x[:self.params.predict_start:], label_plot[k, :self.params.predict_start] * zero_pert, color='purple')
+                ax[k].plot(x[:self.params.predict_start], label_plot[k, :self.params.predict_start]*double_pert[:,k], color='y')
+                ax[k].plot(x[:self.params.predict_start:], label_plot[k, :self.params.predict_start] * zero_pert[:,k], color='purple')
 
                 ax[k].axhline(plot_target_double, color='orange', linestyle='dashed')
                 ax[k].axhline(plot_target_zero, color='orange', linestyle='dashed')
