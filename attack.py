@@ -205,7 +205,9 @@ class Attack():
         # Differentiate loss with respect to input
         loss.backward()
 
-        self.print(i,norm,distance,loss,norm_per_sample.shape[0])
+
+        if i % 100 == 0:
+            self.print(i,norm,distance,loss,norm_per_sample.shape[0])
 
         # Apply one step of optimizer
         optimizer.step()
