@@ -175,7 +175,18 @@ class Attack():
         self.plot_num = plot_num
 
         # Set the model to eval mode
-        self.model.eval()
+        # Replaced model.eval() to deal with
+        # RuntimeError: cudnn RNN backward can only be called in training mode
+        # (https: // github.com / pytorch / pytorch / issues / 10006)
+        for name, module in self.model.named_modules():
+            if isinstance(module, nn.Dropout):
+                module.p = 0
+
+            elif isinstance(module, nn.LSTM):
+                module.dropout = 0
+
+
+
         self.max_pert_len = len(params.tolerance)
 
     def print(self,i,norm,distance,loss):
