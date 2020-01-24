@@ -55,28 +55,20 @@ class AttackLoss(nn.Module):
     # for the moment, target has shape (batch_size,output_dim)
     def forward(self, perturbation, output, target):
 
-        #print("perturb",perturbation.shape)
-        #print("output",output.shape)
-        #print("target",target.shape)
+        output = output[:,-1]
 
         loss_function = nn.MSELoss(reduction="none")
         distance_per_sample = loss_function(output, target).sum(1)
 
-        #print("distance sample",distance_per_sample.shape)
-
         distance = distance_per_sample.sum(0)
-
 
         zero = torch.zeros(perturbation.shape).to(self.device)
         norm_per_sample = loss_function(perturbation, zero).sum(0)
 
-        #print("norm sample", norm_per_sample.shape)
         norm = norm_per_sample.sum(0)
 
         loss_per_sample = norm_per_sample + self.c * distance_per_sample
         loss = norm + self.c * distance
-
-        #print("loss",loss.shape)
 
         return norm_per_sample,distance_per_sample,loss_per_sample,norm,distance,loss
 
@@ -257,7 +249,7 @@ class Attack():
 
         self.project_perturbation(attack_module)
 
-    def attack_batch(self,data,id_batch,v_batch,labels,hidden,cell,estimator):
+    def attack_batch(self, data, id_batch, v_batch, labels, hidden, cell, estimator):
 
             with torch.no_grad():
                 _,original_mu,original_sigma = model.test(data,
@@ -266,7 +258,6 @@ class Attack():
                                                       hidden,
                                                       cell,
                                                       sampling=True)
-
 
             shape = (self.max_pert_len,) + data.shape[:2]
 
@@ -455,7 +446,7 @@ class Attack():
                 test_batch = test_batch.permute(1, 0, 2).to(torch.float32).to(params.device)
                 id_batch = id_batch.unsqueeze(0).to(params.device)
                 v_batch = v.to(torch.float32).to(params.device)
-                test_labels = labels.to(torch.float32).to(params.device)[:,self.params.predict_start:]
+                test_labels = labels.to(torch.float32).to(params.device)[:,-1]
                 batch_size = test_batch.shape[1]
                 hidden = model.init_hidden(batch_size)
                 cell = model.init_cell(batch_size)
