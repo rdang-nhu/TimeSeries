@@ -459,8 +459,8 @@ class Attack():
                 cell = model.init_cell(batch_size)
 
                 print("Sample", i)
-                print("test batch",v_batch[0, 0] * test_batch[:,0,0] + v_batch[0, 1])
-                print("label",labels[0,:])
+                #print("test batch",v_batch[0, 0] * test_batch[:,0,0] + v_batch[0, 1])
+                #print("label",labels[0,:])
 
                 original_mu,original_sigma,best_c,best_perturbation,best_distance,\
                     perturbed_output_mu, perturbed_output_sigma = \
