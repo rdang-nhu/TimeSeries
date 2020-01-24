@@ -200,9 +200,7 @@ class Attack():
         # Differentiate loss with respect to input
         loss.backward()
 
-        print("Grad",attack_module.perturbation.grad)
-
-        self.print(i,norm,distance,loss)
+        #self.print(i,norm,distance,loss)
 
         # Apply one step of optimizer
         optimizer.step()
@@ -248,7 +246,19 @@ class Attack():
 
     def attack_batch(self,data,id_batch,v_batch,labels,hidden,cell,estimator):
 
+            with torch.no_grad():
+                _,original_mu,original_sigma = model.test(data,
+                                                      v_batch,
+                                                      id_batch,
+                                                      hidden,
+                                                      cell,
+                                                      sampling=True)
+
+
             shape = (self.max_pert_len,) + data.shape[:2]
+
+
+
             best_perturbation = {"double": np.zeros(shape),
                                  "zero": np.zeros(shape)}
 
@@ -296,8 +306,6 @@ class Attack():
                     # Evaluate the attack
                     # Run full number of samples on perturbed input to obtain perturbed output
                     with torch.no_grad():
-                        # TODO:
-                        print("sample times",self.params.sample_times)
                         _,perturbed_output,_ = attack_module()
 
                         norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
@@ -328,43 +336,70 @@ class Attack():
                         _,perturbed_output, _ = attack_module()
 
 
-            return best_c, best_perturbation, best_distance
+            return original_mu,original_sigma,best_c, best_perturbation, best_distance
 
-    def plot_batch(self):
 
-        sample_metrics = utils.get_metrics(sample_mu, labels, params.test_predict_start, samples,
-                                           relative=params.relative_metrics)
 
-        # select 10 from samples with highest error and 10 from the rest
-        top_10_nd_sample = (-sample_metrics['ND']).argsort()[:batch_size // 10]  # hard coded to be 10
-        chosen = set(top_10_nd_sample.tolist())
-        all_samples = set(range(batch_size))
-        not_chosen = np.asarray(list(all_samples - chosen))
-        if batch_size < 100:  # make sure there are enough unique samples to choose top 10 from
-            random_sample_10 = np.random.choice(top_10_nd_sample, size=10, replace=True)
-        else:
-            random_sample_10 = np.random.choice(top_10_nd_sample, size=10, replace=False)
+
+    def plot_batch(self,original_mu,original_sigma,
+                   best_c,best_perturbation,best_distance,labels):
+
+
+        batch_size = original_mu.shape[0]
+
+
+        #sample_metrics = utils.get_metrics(original_mu,
+        #                                   labels,
+        #                                   params.test_predict_start,
+        #                                   samples,
+        #                                   relative=params.relative_metrics)
+
+
+        all_samples = np.arange(batch_size)
         if batch_size < 12:  # make sure there are enough unique samples to choose bottom 90 from
-            random_sample_90 = np.random.choice(not_chosen, size=10, replace=True)
+            random_sample = np.random.choice(all_samples, size=10, replace=True)
         else:
-            random_sample_90 = np.random.choice(not_chosen, size=10, replace=False)
-        combined_sample = np.concatenate((random_sample_10, random_sample_90))
+            random_sample = np.random.choice(all_samples, size=10, replace=False)
 
-        label_plot = labels[combined_sample].data.cpu().numpy()
-        predict_mu = sample_mu[combined_sample].data.cpu().numpy()
-        predict_sigma = sample_sigma[combined_sample].data.cpu().numpy()
-        plot_mu = np.concatenate((input_mu[combined_sample].data.cpu().numpy(), predict_mu), axis=1)
-        plot_sigma = np.concatenate((input_sigma[combined_sample].data.cpu().numpy(), predict_sigma), axis=1)
-        plot_metrics = {_k: _v[combined_sample] for _k, _v in sample_metrics.items()}
-        plot_eight_windows(params.plot_dir, plot_mu, plot_sigma, label_plot, params.test_window,
-                           params.test_predict_start, plot_num, plot_metrics, sample)
+        label_plot = labels[random_sample].data.cpu().numpy()
+        original_mu_chosen = original_mu[random_sample].data.cpu().numpy()
+        original_sigma_chosen = original_sigma[random_sample].data.cpu().numpy()
+        #plot_metrics = {_k: _v[combined_sample] for _k, _v in sample_metrics.items()}
+
+        x = np.arange(self.params.test_window)
+        f = plt.figure(figsize=(8, 42), constrained_layout=True)
+        nrows = 10
+        ncols = 1
+        ax = f.subplots(nrows, ncols)
+
+        for k in range(nrows):
+
+
+            ax[k].plot(x[self.params.predict_start:],
+                               original_mu_chosen[k], color='b')
+            ax[k].fill_between(x[self.params.predict_start:],
+                               original_mu_chosen[k] -\
+                                 2 * original_sigma_chosen[k],
+                               original_mu_chosen[k] +\
+                               2 * original_sigma_chosen[k], color='blue',
+                               alpha=0.2)
+            ax[k].plot(x, label_plot[k, :], color='r')
+            ax[k].axvline(self.params.predict_start, color='g', linestyle='dashed')
+
+ 
+            #ax[k].set_title(plot_metrics_str, fontsize=10)
+
+
+        f.savefig( 'plot.png')
+        #plt.close()
 
     def attack(self):
 
         for estimator in ["ours","naive"]:
 
             # Choose a batch on with to plot
-            plot_batch = np.random.randint(len(test_loader) - 1)
+            # plot_batch = np.random.randint(len(test_loader) - 1)
+            plot_batch = 0
 
 
             # For each test sample
@@ -379,20 +414,24 @@ class Attack():
                 test_batch = test_batch.permute(1, 0, 2).to(torch.float32).to(params.device)
                 id_batch = id_batch.unsqueeze(0).to(params.device)
                 v_batch = v.to(torch.float32).to(params.device)
-                labels = labels.to(torch.float32).to(params.device)[:,self.params.predict_start:]
+                test_labels = labels.to(torch.float32).to(params.device)[:,self.params.predict_start:]
                 batch_size = test_batch.shape[1]
-                input_mu = torch.zeros(batch_size, params.test_predict_start, device=params.device)  # scaled
-                input_sigma = torch.zeros(batch_size, params.test_predict_start, device=params.device)  # scaled
                 hidden = model.init_hidden(batch_size)
                 cell = model.init_cell(batch_size)
 
                 print("Sample", i)
 
-                self.attack_batch(test_batch,id_batch,v_batch,labels,hidden,cell,estimator)
+                original_mu,original_sigma,best_c,best_perturbation,best_distance = \
+                    self.attack_batch(test_batch,id_batch,v_batch,test_labels,hidden,cell,estimator)
 
                 if i == plot_batch:
 
-                    self.plot_batch()
+                    self.plot_batch(original_mu,
+                                    original_sigma,
+                                    best_c,
+                                    best_perturbation,
+                                    best_distance,
+                                    labels)
 
 
             # Average the performance across batches
@@ -438,49 +477,8 @@ class Attack():
     return summary_metric
 
 
-def plot_eight_windows(plot_dir,
-                       predict_values,
-                       predict_sigma,
-                       labels,
-                       window_size,
-                       predict_start,
-                       plot_num,
-                       plot_metrics,
-                       sampling=False):
-    x = np.arange(window_size)
-    f = plt.figure(figsize=(8, 42), constrained_layout=True)
-    nrows = 21
-    ncols = 1
-    ax = f.subplots(nrows, ncols)
 
-    for k in range(nrows):
-        if k == 10:
-            ax[k].plot(x, x, color='g')
-            ax[k].plot(x, x[::-1], color='g')
-            ax[k].set_title('This separates top 10 and bottom 90', fontsize=10)
-            continue
-        m = k if k < 10 else k - 1
-        ax[k].plot(x, predict_values[m], color='b')
-        ax[k].fill_between(x[predict_start:], predict_values[m, predict_start:] - 2 * predict_sigma[m, predict_start:],
-                           predict_values[m, predict_start:] + 2 * predict_sigma[m, predict_start:], color='blue',
-                           alpha=0.2)
-        ax[k].plot(x, labels[m, :], color='r')
-        ax[k].axvline(predict_start, color='g', linestyle='dashed')
-
-        # metrics = utils.final_metrics_({_k: [_i[k] for _i in _v] for _k, _v in plot_metrics.items()})
-
-        plot_metrics_str = f'ND: {plot_metrics["ND"][m]: .3f} ' \
-                           f'RMSE: {plot_metrics["RMSE"][m]: .3f}'
-        if sampling:
-            plot_metrics_str += f' rou90: {plot_metrics["rou90"][m]: .3f} ' \
-                                f'rou50: {plot_metrics["rou50"][m]: .3f}'
-
-        ax[k].set_title(plot_metrics_str, fontsize=10)
-
-    f.savefig(os.path.join(plot_dir, str(plot_num) + '.png'))
-    plt.close()
     '''
-
 if __name__ == '__main__':
     # Load the parameters
     args = parser.parse_args()
@@ -490,7 +488,6 @@ if __name__ == '__main__':
     assert os.path.isfile(json_path), 'No json configuration file found at {}'.format(json_path)
     params = utils.Params(json_path)
 
-    utils.set_logger(os.path.join(model_dir, 'eval.log'))
 
     params.model_dir = model_dir
     params.plot_dir = os.path.join(model_dir, 'figures')
