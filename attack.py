@@ -200,7 +200,7 @@ class Attack():
         # Differentiate loss with respect to input
         loss.backward()
 
-        #self.print(i,norm,distance,loss)
+        self.print(i,norm,distance,loss)
 
         # Apply one step of optimizer
         optimizer.step()
@@ -257,8 +257,6 @@ class Attack():
 
             shape = (self.max_pert_len,) + data.shape[:2]
 
-
-
             best_perturbation = {"double": np.zeros(shape),
                                  "zero": np.zeros(shape)}
 
@@ -268,9 +266,16 @@ class Attack():
             best_distance = {"double": np.full(c_shape, np.inf),
                              "zero": np.full(c_shape, np.inf)}
 
+            perturbed_output_mu = {}
+            perturbed_output_sigma = {}
+
             modes = ["double", "zero"]
 
             for mode in modes:
+
+                perturbed_output_mu[mode] = {}
+                perturbed_output_sigma[mode] = {}
+
                 # Loop on values of c to find successful attack with minimum perturbation
 
                 for i in range(len(self.params.c)):
@@ -329,20 +334,25 @@ class Attack():
                 with torch.no_grad():
 
                     for l in range(self.max_pert_len):
-                        # Check if 95% confidence interval is in "buy" or "sell"
+
                         attack_module.perturbation.data = \
                             torch.tensor(best_perturbation[mode][l],
                                          device=self.params.device).float()
-                        _,perturbed_output, _ = attack_module()
+                        _,aux1,aux2 = attack_module()
+
+                        perturbed_output_mu[mode][l] = aux1
+                        perturbed_output_sigma[mode][l] = aux2
 
 
-            return original_mu,original_sigma,best_c, best_perturbation, best_distance
+            return original_mu,original_sigma,best_c, best_perturbation, \
+                   best_distance, perturbed_output_mu, perturbed_output_sigma
 
 
 
 
     def plot_batch(self,original_mu,original_sigma,
-                   best_c,best_perturbation,best_distance,labels):
+                   perturbed_output_mu, perturbed_output_sigma,
+                   best_c,best_perturbation,best_distance, labels,):
 
 
         batch_size = original_mu.shape[0]
@@ -364,7 +374,11 @@ class Attack():
         label_plot = labels[random_sample].data.cpu().numpy()
         original_mu_chosen = original_mu[random_sample].data.cpu().numpy()
         original_sigma_chosen = original_sigma[random_sample].data.cpu().numpy()
+
+
         #plot_metrics = {_k: _v[combined_sample] for _k, _v in sample_metrics.items()}
+
+
 
         x = np.arange(self.params.test_window)
         f = plt.figure(figsize=(8, 42), constrained_layout=True)
@@ -372,8 +386,8 @@ class Attack():
         ncols = 1
         ax = f.subplots(nrows, ncols)
 
-        for k in range(nrows):
 
+        for k in range(nrows):
 
             ax[k].plot(x[self.params.predict_start:],
                                original_mu_chosen[k], color='b')
@@ -383,10 +397,24 @@ class Attack():
                                original_mu_chosen[k] +\
                                2 * original_sigma_chosen[k], color='blue',
                                alpha=0.2)
+
+            for tolerance in perturbed_output_mu["double"].keys():
+                double_mu_chosen = perturbed_output_mu["double"][tolerance][random_sample].data.cpu().numpy()
+                zero_mu_chosen = perturbed_output_mu["zero"][tolerance][random_sample].data.cpu().numpy()
+
+                ax[k].plot(x[self.params.predict_start:],
+                           double_mu_chosen[k], color='black')
+
+                ax[k].plot(x[self.params.predict_start:],
+                           zero_mu_chosen[k], color='brown')
+
+                ax[k].plot(x, label_plot[k, :self.params.predict_start]*(1+best_perturbation["double"][tolerance][random_sample]), color='y')
+                ax[k].plot(x, label_plot[k, :self.params.predict_start] * (1 + best_perturbation["zero"][tolerance][random_sample]), color='purple')
+
             ax[k].plot(x, label_plot[k, :], color='r')
             ax[k].axvline(self.params.predict_start, color='g', linestyle='dashed')
 
- 
+
             #ax[k].set_title(plot_metrics_str, fontsize=10)
 
 
@@ -420,14 +448,19 @@ class Attack():
                 cell = model.init_cell(batch_size)
 
                 print("Sample", i)
+                print("test batch",v_batch[0, 0] * test_batch[:,0,0] + v_batch[0, 1])
+                print("label",labels[0,:])
 
-                original_mu,original_sigma,best_c,best_perturbation,best_distance = \
+                original_mu,original_sigma,best_c,best_perturbation,best_distance,\
+                    perturbed_output_mu, perturbed_output_sigma = \
                     self.attack_batch(test_batch,id_batch,v_batch,test_labels,hidden,cell,estimator)
 
                 if i == plot_batch:
 
                     self.plot_batch(original_mu,
                                     original_sigma,
+                                    perturbed_output_mu,
+                                    perturbed_output_sigma,
                                     best_c,
                                     best_perturbation,
                                     best_distance,
@@ -442,43 +475,7 @@ class Attack():
 
 
 
-    '''
-   
-        
 
-        summary_metric = {}
-        raw_metrics = utils.init_metrics(sample=sample)
-
-        
-        # loop
-            
-           
-
-            for t in range(params.test_predict_start):
-                # if z_t is missing, replace it by output mu from the last time step
-                zero_index = (test_batch[t, :, 0] == 0)
-                if t > 0 and torch.sum(zero_index) > 0:
-                    test_batch[t, zero_index, 0] = mu[zero_index]
-
-                mu, sigma, hidden, cell = model(test_batch[t].unsqueeze(0), id_batch, hidden, cell)
-                input_mu[:, t] = v_batch[:, 0] * mu + v_batch[:, 1]
-                input_sigma[:, t] = v_batch[:, 0] * sigma
-
-            
-                raw_metrics = utils.update_metrics(raw_metrics, input_mu, input_sigma, sample_mu, labels,
-                                                   params.test_predict_start, samples, relative=params.relative_metrics)
-            
-
-            
-
-        summary_metric = utils.final_metrics(raw_metrics, sampling=sample)
-        metrics_string = '; '.join('{}: {:05.3f}'.format(k, v) for k, v in summary_metric.items())
-        logger.info('- Full test metrics: ' + metrics_string)
-    return summary_metric
-
-
-
-    '''
 if __name__ == '__main__':
     # Load the parameters
     args = parser.parse_args()
