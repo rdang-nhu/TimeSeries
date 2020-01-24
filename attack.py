@@ -424,8 +424,8 @@ class Attack():
                 ax[k].plot(x[:self.params.predict_start], label_plot[k, :self.params.predict_start]*double_pert[:self.params.predict_start,k], color='y')
                 ax[k].plot(x[:self.params.predict_start:], label_plot[k, :self.params.predict_start] * zero_pert[:self.params.predict_start,k], color='purple')
 
-                ax[k].axhline(plot_target_double, color='orange', linestyle='dashed')
-                ax[k].axhline(plot_target_zero, color='orange', linestyle='dashed')
+                ax[k].axhline(plot_target_double[k], color='orange', linestyle='dashed')
+                ax[k].axhline(plot_target_zero[k], color='orange', linestyle='dashed')
 
             ax[k].plot(x, label_plot[k, :], color='r')
             ax[k].axvline(self.params.predict_start, color='g', linestyle='dashed')
