@@ -109,9 +109,12 @@ class Attack():
               distance.detach().item()/batch,
               loss.detach().item()/batch)
 
-    def project_perturbation(self,perturbation):
+    def project_perturbation(self,attack_module):
 
-        return torch.max(perturbation,-1)
+        aux = torch.tensor([-1.], device=self.model.device)
+
+        attack_module.perturbation.data = torch.max(attack_module.perturbation.data, aux)
+
 
     def attack_step_ours(self, attack_module, optimizer, i, target):
 
