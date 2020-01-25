@@ -6,6 +6,7 @@ __pycache__/
 venv/
 data/
 plot.png
+attack_logs/*
 
 *.pyc
 *.pyo

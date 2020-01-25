@@ -98,6 +98,8 @@ class Attack():
             elif isinstance(module, nn.LSTM):
                 module.dropout = 0
 
+        print('model: ', model)
+
         self.max_pert_len = len(params.tolerance)
 
     def print(self,i,norm,distance,loss,batch):
@@ -312,7 +314,6 @@ class Attack():
                     cell = model.init_cell(batch_size)
 
                     print("Sample", i)
-                    #print("test batch", test_batch[:,0,0])
                     #print("label",labels[0,:])
 
                     original_mu,original_sigma,best_c,best_perturbation,best_distance,\
@@ -346,7 +347,7 @@ if __name__ == '__main__':
     test_set = TestDataset(data_dir, args.dataset, params.num_class)
     test_loader = DataLoader(test_set, batch_size=params.predict_batch, sampler=RandomSampler(test_set), num_workers=4)
 
-    print('model: ', model)
+
     loss_fn = net.loss_fn
 
     # Reload weights from the saved file

@@ -8,6 +8,7 @@ import os
 import model.net as net
 import utils
 
+EPS = 1e-5
 
 class AttackLoss(nn.Module):
 
@@ -15,18 +16,19 @@ class AttackLoss(nn.Module):
         super(AttackLoss, self).__init__()
         self.c = c
         self.device = params.device
-        self.v_batch
+        self.v_batch = v_batch
 
     # perturbation has shape (nSteps,)
     # output has shape (nSteps,batch_size,output_dim)
     # for the moment, target has shape (batch_size,output_dim)
     def forward(self, perturbation, output, target):
 
-        output = output[:,-1]/self.v_batch[:,0]
-        target /= self.v_batch[:,0]
+        output = output[:,-1]/(self.v_batch[:,0]+EPS)
+
+        target_normalized = target / (self.v_batch[:,0] + EPS)
 
         loss_function = nn.MSELoss(reduction="none")
-        distance_per_sample = loss_function(output, target)
+        distance_per_sample = loss_function(output, target_normalized)
 
         distance = distance_per_sample.sum(0)
 
@@ -71,6 +73,8 @@ def set_params():
     parser.add_argument('--restore-file', default='best',
                         help='Optional, name of the file in --model_dir containing weights to reload before \
                         training')  # 'best' or 'epoch_#'
+    parser.add_argument('--output_folder',  help='Output folder for plots')
+
 
     # Attack parameters
     parser.add_argument('--c', nargs='+', type=float, default=[0.01, 0.1, 1, 10, 100],
@@ -102,6 +106,10 @@ def set_params():
     params.tolerance = args.tolerance
     params.batch_size = args.batch_size
     params.learning_rate = args.lr
+    params.output_folder = os.path.join("attack_logs",args.output_folder)
+
+    if not os.path.exists(params.output_folder):
+        os.mkdirs(params.output_folder)
 
     return params,model_dir,args,data_dir
 
