@@ -8,7 +8,7 @@ import numpy as np
 def plot_batch(original_mu ,original_sigma,
                perturbed_output_mu, perturbed_output_sigma,
                best_c ,best_perturbation ,best_distance, labels,
-               targets):
+               targets,params):
 
 
     batch_size = original_mu.shape[0]
@@ -36,7 +36,7 @@ def plot_batch(original_mu ,original_sigma,
 
 
 
-    x = np.arange(self.params.test_window)
+    x = np.arange(params.test_window)
     f = plt.figure(figsize=(8, 42), constrained_layout=True)
     nrows = 10
     ncols = 1
@@ -45,9 +45,9 @@ def plot_batch(original_mu ,original_sigma,
 
     for k in range(nrows):
 
-        ax[k].plot(x[self.params.predict_start:],
+        ax[k].plot(x[params.predict_start:],
                    original_mu_chosen[k], color='b')
-        ax[k].fill_between(x[self.params.predict_start:],
+        ax[k].fill_between(x[params.predict_start:],
                            original_mu_chosen[k] - \
                            2 * original_sigma_chosen[k],
                            original_mu_chosen[k] + \
@@ -58,10 +58,10 @@ def plot_batch(original_mu ,original_sigma,
             double_mu_chosen = perturbed_output_mu["double"][tolerance][random_sample].data.cpu().numpy()
             zero_mu_chosen = perturbed_output_mu["zero"][tolerance][random_sample].data.cpu().numpy()
 
-            ax[k].plot(x[self.params.predict_start:],
+            ax[k].plot(x[params.predict_start:],
                        double_mu_chosen[k], color='black')
 
-            ax[k].plot(x[self.params.predict_start:],
+            ax[k].plot(x[params.predict_start:],
                        zero_mu_chosen[k], color='brown')
 
             double_pert = ( 1 +best_perturbation["double"][tolerance][: ,random_sample])
@@ -69,14 +69,16 @@ def plot_batch(original_mu ,original_sigma,
 
             print(double_pert[k])
 
-            ax[k].plot(x[:self.params.predict_start], label_plot[k, :self.params.predict_start ] *double_pert[:self.params.predict_start ,k], color='y')
-            ax[k].plot(x[:self.params.predict_start:], label_plot[k, :self.params.predict_start] * zero_pert[:self.params.predict_start ,k], color='purple')
+            ax[k].plot(x[:params.predict_start], label_plot[k, :params.predict_start ] *
+                       double_pert[:params.predict_start ,k], color='y')
+            ax[k].plot(x[:params.predict_start:], label_plot[k, :params.predict_start] *
+                       zero_pert[:params.predict_start ,k], color='purple')
 
             ax[k].axhline(plot_target_double[k], color='orange', linestyle='dashed')
             ax[k].axhline(plot_target_zero[k], color='orange', linestyle='dashed')
 
         ax[k].plot(x, label_plot[k, :], color='r')
-        ax[k].axvline(self.params.predict_start, color='g', linestyle='dashed')
+        ax[k].axvline(params.predict_start, color='g', linestyle='dashed')
 
         # ax[k].set_title(plot_metrics_str, fontsize=10)
 
