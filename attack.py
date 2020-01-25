@@ -29,7 +29,7 @@ class AttackModule(nn.Module):
         self.hidden = hidden
         self.cell = cell
         self.n_inputs = data.shape[1]
-        self.attack_loss = AttackLoss(params,c)
+        self.attack_loss = AttackLoss(params,c,v_batch)
 
         # Initialize perturbation
         self.perturbation = nn.Parameter(torch.zeros(self.data.shape[:2], device=self.params.device))
@@ -304,12 +304,15 @@ class Attack():
                     id_batch = id_batch.unsqueeze(0).to(params.device)
                     v_batch = v.to(torch.float32).to(params.device)
                     test_labels = labels.to(torch.float32).to(params.device)[:,-1]
+
+                    #print(v_batch[:],torch.mean(labels,dim=0))
+
                     batch_size = test_batch.shape[1]
                     hidden = model.init_hidden(batch_size)
                     cell = model.init_cell(batch_size)
 
                     print("Sample", i)
-                    #print("test batch",v_batch[0, 0] * test_batch[:,0,0] + v_batch[0, 1])
+                    #print("test batch", test_batch[:,0,0])
                     #print("label",labels[0,:])
 
                     original_mu,original_sigma,best_c,best_perturbation,best_distance,\

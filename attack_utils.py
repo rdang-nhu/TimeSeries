@@ -11,17 +11,19 @@ import utils
 
 class AttackLoss(nn.Module):
 
-    def __init__(self, params,c):
+    def __init__(self, params, c, v_batch):
         super(AttackLoss, self).__init__()
         self.c = c
         self.device = params.device
+        self.v_batch
 
     # perturbation has shape (nSteps,)
     # output has shape (nSteps,batch_size,output_dim)
     # for the moment, target has shape (batch_size,output_dim)
     def forward(self, perturbation, output, target):
 
-        output = output[:,-1]
+        output = output[:,-1]/self.v_batch[:,0]
+        target /= self.v_batch[:,0]
 
         loss_function = nn.MSELoss(reduction="none")
         distance_per_sample = loss_function(output, target)
