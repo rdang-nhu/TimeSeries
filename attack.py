@@ -331,7 +331,7 @@ class Attack():
 
                         print("norm",norm)
                         print("numpy_norm",numpy_norm)
-                        print("numpy perturbation",attack_module.perturbation)
+                        print("numpy perturbation",attack_module.perturbation[:,])
 
                         for l in range(self.max_pert_len):
                             indexes_best_c = np.logical_and(numpy_norm <= self.params.tolerance[l],
