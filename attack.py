@@ -1,15 +1,15 @@
 import argparse
-import logging
-import os
 
-import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
 
+import attack_plot
+import attack_utils
 import utils
 import model.net as net
+from attack_utils import AttackLoss
 from dataloader import *
 
 import matplotlib
@@ -41,36 +41,6 @@ parser.add_argument('--tolerance', nargs='+',type=float, default=[0.01, 0.1, 1],
                     help='Max perturbation L2 norm')
 
 parser.add_argument('--debug', action="store_true", help='Debug mode')
-
-
-class AttackLoss(nn.Module):
-
-    def __init__(self, params,c):
-        super(AttackLoss, self).__init__()
-        self.c = c
-        self.device = params.device
-
-    # perturbation has shape (nSteps,)
-    # output has shape (nSteps,batch_size,output_dim)
-    # for the moment, target has shape (batch_size,output_dim)
-    def forward(self, perturbation, output, target):
-
-        output = output[:,-1]
-
-        loss_function = nn.MSELoss(reduction="none")
-        distance_per_sample = loss_function(output, target)
-
-        distance = distance_per_sample.sum(0)
-
-        zero = torch.zeros(perturbation.shape).to(self.device)
-        norm_per_sample = loss_function(perturbation, zero).sum(0)
-
-        norm = norm_per_sample.sum(0)
-
-        loss_per_sample = norm_per_sample + self.c * distance_per_sample
-        loss = norm + self.c * distance
-
-        return norm_per_sample,distance_per_sample,loss_per_sample,norm,distance,loss
 
 class AttackModule(nn.Module):
 
@@ -112,30 +82,18 @@ class AttackModule(nn.Module):
         perturbed_data[:,:,0] = self.data[:,:,0]  * (1 + self.perturbation)
         perturbed_data[:,:,1:] = self.data[:,:,1:]
 
-        samples, sample_mu, sample_sigma = model.test(perturbed_data,
-                                                      self.v_batch,
-                                                      self.id_batch,
-                                                      self.hidden,
-                                                      self.cell,
-                                                      sampling=True,
-                                                      n_samples=self.params.batch_size)
+        samples, sample_mu, sample_sigma = attack_utils.forward_model(model,
+                                                                      perturbed_data,
+                                                                      self.id_batch,
+                                                                      self.v_batch,
+                                                                      self.hidden,
+                                                                      self.cell,
+                                                                      self.params)
 
         return samples,sample_mu,sample_sigma
 
     # Not clear yet how to compute that
     def forward_naive(self):
-
-        perturbed_data = torch.zeros(self.data.shape).to(self.params.device)
-        perturbed_data[:, :, 0] = self.data[:, :, 0] * (1 + self.perturbation)
-        perturbed_data[:, :, 1:] = self.data[:, :, 1:]
-
-        samples, sample_mu, sample_sigma = model.test(self.data,
-                                                      self.v_batch,
-                                                      self.id_batch,
-                                                      self.hidden,
-                                                      self.cell,
-                                                      sampling=True,
-                                                      n_samples=self.params.batch_size)
 
         # Forward pass on all samples
         aux_estimate = torch.zeros(batch,device=self.model.device)
@@ -254,12 +212,13 @@ class Attack():
     def attack_batch(self, data, id_batch, v_batch, labels, hidden, cell, estimator):
 
             with torch.no_grad():
-                _,original_mu,original_sigma = model.test(data,
-                                                      v_batch,
-                                                      id_batch,
-                                                      hidden,
-                                                      cell,
-                                                      sampling=True)
+                _, original_mu, original_sigma = attack_utils.forward_model(model,
+                                                                          data,
+                                                                          id_batch,
+                                                                          v_batch,
+                                                                          hidden,
+                                                                          cell,
+                                                                          self.params)
 
             shape = (self.max_pert_len,) + data.shape[:2]
 
@@ -358,91 +317,6 @@ class Attack():
             return original_mu,original_sigma,best_c, best_perturbation, \
                    best_distance, perturbed_output_mu, perturbed_output_sigma, targets
 
-
-
-
-    def plot_batch(self,original_mu,original_sigma,
-                   perturbed_output_mu, perturbed_output_sigma,
-                   best_c,best_perturbation,best_distance, labels,
-                   targets):
-
-
-        batch_size = original_mu.shape[0]
-
-
-        #sample_metrics = utils.get_metrics(original_mu,
-        #                                   labels,
-        #                                   params.test_predict_start,
-        #                                   samples,
-        #                                   relative=params.relative_metrics)
-
-
-        all_samples = np.arange(batch_size)
-        if batch_size < 12:  # make sure there are enough unique samples to choose bottom 90 from
-            random_sample = np.random.choice(all_samples, size=10, replace=True)
-        else:
-            random_sample = np.random.choice(all_samples, size=10, replace=False)
-
-        label_plot = labels[random_sample].data.cpu().numpy()
-        original_mu_chosen = original_mu[random_sample].data.cpu().numpy()
-        original_sigma_chosen = original_sigma[random_sample].data.cpu().numpy()
-        plot_target_double = targets["double"][random_sample].data.cpu().numpy()
-        plot_target_zero = targets["zero"][random_sample].data.cpu().numpy()
-
-
-        #plot_metrics = {_k: _v[combined_sample] for _k, _v in sample_metrics.items()}
-
-
-
-        x = np.arange(self.params.test_window)
-        f = plt.figure(figsize=(8, 42), constrained_layout=True)
-        nrows = 10
-        ncols = 1
-        ax = f.subplots(nrows, ncols)
-
-
-        for k in range(nrows):
-
-            ax[k].plot(x[self.params.predict_start:],
-                               original_mu_chosen[k], color='b')
-            ax[k].fill_between(x[self.params.predict_start:],
-                               original_mu_chosen[k] -\
-                                 2 * original_sigma_chosen[k],
-                               original_mu_chosen[k] +\
-                               2 * original_sigma_chosen[k], color='blue',
-                               alpha=0.2)
-
-            for tolerance in perturbed_output_mu["double"].keys():
-                double_mu_chosen = perturbed_output_mu["double"][tolerance][random_sample].data.cpu().numpy()
-                zero_mu_chosen = perturbed_output_mu["zero"][tolerance][random_sample].data.cpu().numpy()
-
-                ax[k].plot(x[self.params.predict_start:],
-                           double_mu_chosen[k], color='black')
-
-                ax[k].plot(x[self.params.predict_start:],
-                           zero_mu_chosen[k], color='brown')
-
-                double_pert = (1+best_perturbation["double"][tolerance][:,random_sample])
-                zero_pert = (1 + best_perturbation["zero"][tolerance][:,random_sample])
-
-                print(double_pert[k])
-
-                ax[k].plot(x[:self.params.predict_start], label_plot[k, :self.params.predict_start]*double_pert[:self.params.predict_start,k], color='y')
-                ax[k].plot(x[:self.params.predict_start:], label_plot[k, :self.params.predict_start] * zero_pert[:self.params.predict_start,k], color='purple')
-
-                ax[k].axhline(plot_target_double[k], color='orange', linestyle='dashed')
-                ax[k].axhline(plot_target_zero[k], color='orange', linestyle='dashed')
-
-            ax[k].plot(x, label_plot[k, :], color='r')
-            ax[k].axvline(self.params.predict_start, color='g', linestyle='dashed')
-
-
-            #ax[k].set_title(plot_metrics_str, fontsize=10)
-
-
-        f.savefig( 'plot.png')
-        #plt.close()
-
     def attack(self):
 
         for estimator in ["ours"]:
@@ -479,8 +353,7 @@ class Attack():
                         perturbed_output_mu, perturbed_output_sigma,targets = \
                         self.attack_batch(test_batch,id_batch,v_batch,test_labels,hidden,cell,estimator)
 
-
-                    self.plot_batch(original_mu,
+                    attack_plot.plot_batch(original_mu,
                                     original_sigma,
                                     perturbed_output_mu,
                                     perturbed_output_sigma,
@@ -497,52 +370,17 @@ class Attack():
 
             # Plots some of adversarial samples
 
-
-
-
 if __name__ == '__main__':
-    # Load the parameters
-    args = parser.parse_args()
-    model_dir = os.path.join('experiments', args.model_name)
-    json_path = os.path.join(model_dir, 'params.json')
-    data_dir = os.path.join(args.data_folder, args.dataset)
-    assert os.path.isfile(json_path), 'No json configuration file found at {}'.format(json_path)
-    params = utils.Params(json_path)
 
+    params,model_dir,args,data_dir = attack_utils.set_params()
 
-    params.model_dir = model_dir
-    params.plot_dir = os.path.join(model_dir, 'figures')
-    params.c = args.c
-    params.n_iterations = args.n_iterations
-    params.tolerance = args.tolerance
-    params.batch_size = args.batch_size
-    params.learning_rate = args.lr
-
-    cuda_exist = torch.cuda.is_available()  # use GPU is available
-
-    # Set random seeds for reproducible experiments if necessary
-    if cuda_exist:
-        params.device = torch.device('cuda')
-        # torch.cuda.manual_seed(240)
-        logger.info('Using Cuda...')
-        model = net.Net(params).cuda()
-    else:
-        params.device = torch.device('cpu')
-        # torch.manual_seed(230)
-        logger.info('Not using cuda...')
-        model = net.Net(params)
-
-    # Create the input data pipeline
-    logger.info('Loading the datasets...')
+    model = attack_utils.set_cuda(params,logger)
 
     test_set = TestDataset(data_dir, args.dataset, params.num_class)
     test_loader = DataLoader(test_set, batch_size=params.predict_batch, sampler=RandomSampler(test_set), num_workers=4)
-    logger.info('- done.')
 
     print('model: ', model)
     loss_fn = net.loss_fn
-
-    logger.info('Starting evaluation')
 
     # Reload weights from the saved file
     utils.load_checkpoint(os.path.join(model_dir, args.restore_file + '.pth.tar'), model)
