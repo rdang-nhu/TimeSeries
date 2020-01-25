@@ -111,7 +111,7 @@ class Attack():
 
     def project_perturbation(self,attack_module):
 
-        aux = torch.tensor([-1.], device=self.model.device)
+        aux = torch.tensor([-1.], device=self.params.device)
 
         attack_module.perturbation.data = torch.max(attack_module.perturbation.data, aux)
 
