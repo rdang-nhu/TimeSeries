@@ -241,7 +241,6 @@ class Attack():
                     with torch.no_grad():
                         _,perturbed_output,_ = attack_module()
 
-
                         norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
                             attack_module.attack_loss(attack_module.perturbation, perturbed_output, target)
 
@@ -250,7 +249,10 @@ class Attack():
                         numpy_distance = utils.convert_from_tensor(distance_per_sample)
                         numpy_perturbation = utils.convert_from_tensor(attack_module.perturbation.data)
 
-                        print("numpy perturbation",attack_module.perturbation.data[:,0])
+                        #print("numpy perturbation",attack_module.perturbation.data[:,0])
+
+                        print("Final", i)
+                        self.print(i, norm, distance, loss, norm_per_sample.shape[0])
 
                         for l in range(self.max_pert_len):
                             indexes_best_c = np.logical_and(numpy_norm <= self.params.tolerance[l],
