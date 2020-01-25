@@ -1,4 +1,8 @@
+import matplotlib
+
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 import numpy as np
 
 def plot_batch(self ,original_mu ,original_sigma,

@@ -12,10 +12,7 @@ import model.net as net
 from attack_utils import AttackLoss
 from dataloader import *
 
-import matplotlib
 
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 logger = logging.getLogger('DeepAR.Eval')
 
