@@ -111,8 +111,7 @@ class Attack():
 
     def project_perturbation(self,perturbation):
 
-        # TODO: implement to be consistent with way perturbation is applied
-        return perturbation
+        return torch.max(perturbation,-1)
 
     def attack_step_ours(self, attack_module, optimizer, i, target):
 
