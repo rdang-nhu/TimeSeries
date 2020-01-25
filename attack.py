@@ -321,7 +321,6 @@ class Attack():
                     with torch.no_grad():
                         _,perturbed_output,_ = attack_module()
 
-                        print("numpy perturbation 0", attack_module.perturbation.data[:, 0])
 
                         norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
                             attack_module.attack_loss(attack_module.perturbation, perturbed_output, target)
@@ -331,8 +330,7 @@ class Attack():
                         numpy_distance = utils.convert_from_tensor(distance_per_sample)
                         numpy_perturbation = utils.convert_from_tensor(attack_module.perturbation.data)
 
-                        print("numpy_norm",numpy_norm[0])
-                        print("numpy perturbation 1",attack_module.perturbation.data[:,0])
+                        print("numpy perturbation",attack_module.perturbation.data[:,0])
 
                         for l in range(self.max_pert_len):
                             indexes_best_c = np.logical_and(numpy_norm <= self.params.tolerance[l],
@@ -453,6 +451,7 @@ class Attack():
             # plot_batch = np.random.randint(len(test_loader) - 1)
             plot_batch = 0
 
+            print("params", self.params.predict_steps)
 
             # For each test sample
             # Test_loader:
@@ -461,7 +460,6 @@ class Attack():
             # v ([batch_size, 2]): scaling factor for each window;
             # labels ([batch_size, train_window]): z_{1:T}.
             for i, (test_batch, id_batch, v, labels) in enumerate(tqdm(self.test_loader)):
-
                 if i == plot_batch:
 
                     # Prepare batch data
