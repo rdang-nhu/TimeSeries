@@ -205,7 +205,7 @@ class Attack():
         # Differentiate loss with respect to input
         loss.backward()
 
-        if i % 100 == 0:
+        if i % 1 == 0:
             print("Iteration", i)
             self.print(i,norm,distance,loss,norm_per_sample.shape[0])
 
