@@ -16,28 +16,7 @@ from dataloader import *
 
 logger = logging.getLogger('DeepAR.Eval')
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', default='elect', help='Name of the dataset')
-parser.add_argument('--data-folder', default='data', help='Parent dir of the dataset')
-parser.add_argument('--model-name', default='base_model', help='Directory containing params.json')
-parser.add_argument('--relative-metrics', action='store_true', help='Whether to normalize the metrics by label scales')
-parser.add_argument('--restore-file', default='best',
-                    help='Optional, name of the file in --model_dir containing weights to reload before \
-                    training')  # 'best' or 'epoch_#'
 
-# Attack parameters
-parser.add_argument('--c',nargs='+', type=float, default=[0.01, 0.1, 1, 10, 100],
-                        help='list of c coefficients (see Carlini et al.)')
-parser.add_argument('--lr', type=float, default=0.001,
-                        help='learning rate')
-parser.add_argument('--batch_size',nargs='+', type=int, default=50,
-                        help='Batch size for perturbation generation')
-parser.add_argument('--n_iterations', type=int, default=1000,
-                        help='Number of iterations for attack')
-parser.add_argument('--tolerance', nargs='+',type=float, default=[0.01, 0.1, 1],
-                    help='Max perturbation L2 norm')
-
-parser.add_argument('--debug', action="store_true", help='Debug mode')
 
 class AttackModule(nn.Module):
 
