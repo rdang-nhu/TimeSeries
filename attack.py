@@ -329,6 +329,7 @@ class Attack():
                         numpy_distance = utils.convert_from_tensor(distance_per_sample)
                         numpy_perturbation = utils.convert_from_tensor(attack_module.perturbation.data)
 
+                        print("numpy_norm",numpy_norm)
                         print("numpy perturbation",numpy_perturbation)
 
                         for l in range(self.max_pert_len):
