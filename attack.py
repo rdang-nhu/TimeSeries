@@ -322,7 +322,8 @@ class Attack():
                                     best_perturbation,
                                     best_distance,
                                     labels,
-                                    targets)
+                                    targets,
+                                    params)
 
 
             # Average the performance across batches
