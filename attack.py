@@ -327,11 +327,11 @@ class Attack():
                         # Find
                         numpy_norm = np.sqrt(utils.convert_from_tensor(norm_per_sample))
                         numpy_distance = utils.convert_from_tensor(distance_per_sample)
-                        numpy_perturbation = utils.convert_from_tensor(attack_module.perturbation.data)
+                        numpy_perturbation = utils.convert_from_tensor(attack_module.perturbation)
 
                         print("norm",norm)
                         print("numpy_norm",numpy_norm)
-                        print("numpy perturbation",attack_module.perturbation.data)
+                        print("numpy perturbation",attack_module.perturbation)
 
                         for l in range(self.max_pert_len):
                             indexes_best_c = np.logical_and(numpy_norm <= self.params.tolerance[l],
