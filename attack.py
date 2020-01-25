@@ -329,6 +329,8 @@ class Attack():
                         numpy_distance = utils.convert_from_tensor(distance_per_sample)
                         numpy_perturbation = utils.convert_from_tensor(attack_module.perturbation.data)
 
+                        print("numpy perturbation",numpy_perturbation)
+
                         for l in range(self.max_pert_len):
                             indexes_best_c = np.logical_and(numpy_norm <= self.params.tolerance[l],
                                                             numpy_distance < best_distance[mode][l])
