@@ -3,6 +3,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+import os
+
 import numpy as np
 
 def plot_batch(original_mu ,original_sigma,
@@ -37,24 +39,25 @@ def plot_batch(original_mu ,original_sigma,
 
 
     x = np.arange(params.test_window)
-    f = plt.figure(figsize=(8, 42), constrained_layout=True)
+
     nrows = 10
     ncols = 1
-    ax = f.subplots(nrows, ncols)
 
+    for tolerance in perturbed_output_mu["double"].keys():
+        f = plt.figure(figsize=(8, 42), constrained_layout=True)
+        ax = f.subplots(nrows, ncols)
 
-    for k in range(nrows):
+        for k in range(nrows):
 
-        ax[k].plot(x[params.predict_start:],
-                   original_mu_chosen[k], color='b')
-        ax[k].fill_between(x[params.predict_start:],
-                           original_mu_chosen[k] - \
-                           2 * original_sigma_chosen[k],
-                           original_mu_chosen[k] + \
-                           2 * original_sigma_chosen[k], color='blue',
-                           alpha=0.2)
+            ax[k].plot(x[params.predict_start:],
+                       original_mu_chosen[k], color='b')
+            ax[k].fill_between(x[params.predict_start:],
+                               original_mu_chosen[k] - \
+                               2 * original_sigma_chosen[k],
+                               original_mu_chosen[k] + \
+                               2 * original_sigma_chosen[k], color='blue',
+                               alpha=0.2)
 
-        for tolerance in perturbed_output_mu["double"].keys():
             double_mu_chosen = perturbed_output_mu["double"][tolerance][random_sample].data.cpu().numpy()
             zero_mu_chosen = perturbed_output_mu["zero"][tolerance][random_sample].data.cpu().numpy()
 
@@ -77,11 +80,11 @@ def plot_batch(original_mu ,original_sigma,
             ax[k].axhline(plot_target_double[k], color='orange', linestyle='dashed')
             ax[k].axhline(plot_target_zero[k], color='orange', linestyle='dashed')
 
-        ax[k].plot(x, label_plot[k, :], color='r')
-        ax[k].axvline(params.predict_start, color='g', linestyle='dashed')
+            ax[k].plot(x, label_plot[k, :], color='r')
+            ax[k].axvline(params.predict_start, color='g', linestyle='dashed')
 
         # ax[k].set_title(plot_metrics_str, fontsize=10)
 
-
-    f.savefig( 'plot.png')
-    # plt.close()
+        name = 'plot_tolerance_'+str(params.tolerance[tolerance])+'.png'
+        f.savefig(os.path.join(params.output_folder,name))
+        plt.close()

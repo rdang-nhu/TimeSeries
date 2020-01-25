@@ -23,9 +23,9 @@ class AttackLoss(nn.Module):
     # for the moment, target has shape (batch_size,output_dim)
     def forward(self, perturbation, output, target):
 
-        output = output[:,-1]/(self.v_batch[:,0]+EPS)
+        output = output[:,-1] / self.v_batch[:,0]
 
-        target_normalized = target / (self.v_batch[:,0] + EPS)
+        target_normalized = target / self.v_batch[:,0]
 
         loss_function = nn.MSELoss(reduction="none")
         distance_per_sample = loss_function(output, target_normalized)
@@ -109,7 +109,7 @@ def set_params():
     params.output_folder = os.path.join("attack_logs",args.output_folder)
 
     if not os.path.exists(params.output_folder):
-        os.mkdirs(params.output_folder)
+        os.makedirs(params.output_folder)
 
     return params,model_dir,args,data_dir
 

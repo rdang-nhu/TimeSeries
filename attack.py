@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
+import pandas as pd
 
 import attack_plot
 import attack_utils
@@ -200,6 +201,8 @@ class Attack():
             modes = ["double", "zero"]
             targets = {}
 
+            lines = []
+
             for mode in modes:
 
                 perturbed_output_mu[mode] = {}
@@ -257,6 +260,7 @@ class Attack():
                         self.print(i, norm, distance, loss, norm_per_sample.shape[0])
 
                         for l in range(self.max_pert_len):
+
                             indexes_best_c = np.logical_and(numpy_norm <= self.params.tolerance[l],
                                                             numpy_distance < best_distance[mode][l])
 
@@ -265,6 +269,12 @@ class Attack():
                             best_distance[mode][l, indexes_best_c] = \
                                 numpy_distance[indexes_best_c]
                             best_c[mode][l, indexes_best_c] = c
+
+                        # Save norm and distance for c plot
+                        mean_numpy_norm = np.mean(numpy_norm)
+                        mean_distance = np.mean(np.sqrt(numpy_distance))
+
+                        lines.append([mode,c,mean_numpy_norm,mean_distance])
 
                 with torch.no_grad():
 
@@ -280,7 +290,8 @@ class Attack():
 
 
             return original_mu,original_sigma,best_c, best_perturbation, \
-                   best_distance, perturbed_output_mu, perturbed_output_sigma, targets
+                   best_distance, perturbed_output_mu, perturbed_output_sigma,\
+                   targets,lines
 
     def attack(self):
 
@@ -301,6 +312,12 @@ class Attack():
             for i, (test_batch, id_batch, v, labels) in enumerate(tqdm(self.test_loader)):
                 if i == plot_batch:
 
+                    index = v[:,0] > 0
+                    test_batch = test_batch[index]
+                    id_batch = id_batch[index]
+                    v = v[index]
+                    labels = labels[index]
+
                     # Prepare batch data
                     test_batch = test_batch.permute(1, 0, 2).to(torch.float32).to(params.device)
                     id_batch = id_batch.unsqueeze(0).to(params.device)
@@ -317,7 +334,7 @@ class Attack():
                     #print("label",labels[0,:])
 
                     original_mu,original_sigma,best_c,best_perturbation,best_distance,\
-                        perturbed_output_mu, perturbed_output_sigma,targets = \
+                        perturbed_output_mu, perturbed_output_sigma,targets, lines = \
                         self.attack_batch(test_batch,id_batch,v_batch,test_labels,hidden,cell,estimator)
 
                     attack_plot.plot_batch(original_mu,
@@ -330,6 +347,9 @@ class Attack():
                                     labels,
                                     targets,
                                     params)
+
+                    df = pd.DataFrame(lines,columns=["mode","c","norm","distance"])
+                    df.to_csv(os.path.join(params.output_folder,"results.csv"))
 
 
             # Average the performance across batches
