@@ -59,7 +59,7 @@ def forward_model(model,data,id_batch,v_batch,hidden,cell,params):
     return samples,sample_mu,sample_sigma
 
 def set_params():
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='elect', help='Name of the dataset')
     parser.add_argument('--data-folder', default='data', help='Parent dir of the dataset')

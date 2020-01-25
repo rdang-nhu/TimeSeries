@@ -12,18 +12,13 @@ import model.net as net
 from attack_utils import AttackLoss
 from dataloader import *
 
-
-
 logger = logging.getLogger('DeepAR.Eval')
-
-
 
 class AttackModule(nn.Module):
 
     def __init__(self, model, params, c, data,id_batch, v_batch, hidden, cell):
 
         super(AttackModule, self).__init__()
-
 
         self.model = model
         self.params = params
@@ -35,7 +30,6 @@ class AttackModule(nn.Module):
         self.cell = cell
         self.n_inputs = data.shape[1]
         self.attack_loss = AttackLoss(params,c)
-
 
         # Initialize perturbation
         self.perturbation = nn.Parameter(torch.zeros(self.data.shape[:2], device=self.params.device))
@@ -83,15 +77,8 @@ class AttackModule(nn.Module):
 
         return sample_mu,aux_estimate
 
+
 class Attack():
-    '''Attack the model.
-            Args:
-                model: (torch.nn.Module) the Deep AR model
-                loss_fn: a function that takes outputs and labels per timestep, and then computes the loss for the batch
-                test_loader: load test data and labels
-                params: (Params) hyperparameters
-                plot_num: (-1): evaluation from evaluate.py; else (epoch): evaluation on epoch
-        '''
 
     def __init__(self,model, loss_fn, test_loader, params, plot_num):
         self.model = model
@@ -110,8 +97,6 @@ class Attack():
 
             elif isinstance(module, nn.LSTM):
                 module.dropout = 0
-
-
 
         self.max_pert_len = len(params.tolerance)
 
