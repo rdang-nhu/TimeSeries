@@ -205,7 +205,6 @@ class Attack():
         # Differentiate loss with respect to input
         loss.backward()
 
-
         if i % 100 == 0:
             print("Iteration", i)
             self.print(i,norm,distance,loss,norm_per_sample.shape[0])
@@ -422,6 +421,8 @@ class Attack():
 
                 double_pert = (1+best_perturbation["double"][tolerance][:,random_sample])
                 zero_pert = (1 + best_perturbation["zero"][tolerance][:,random_sample])
+
+                print(double_pert[k])
 
                 ax[k].plot(x[:self.params.predict_start], label_plot[k, :self.params.predict_start]*double_pert[:self.params.predict_start,k], color='y')
                 ax[k].plot(x[:self.params.predict_start:], label_plot[k, :self.params.predict_start] * zero_pert[:self.params.predict_start,k], color='purple')
