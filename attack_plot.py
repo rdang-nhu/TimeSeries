@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-def plot_batch(self ,original_mu ,original_sigma,
+def plot_batch(original_mu ,original_sigma,
                perturbed_output_mu, perturbed_output_sigma,
                best_c ,best_perturbation ,best_distance, labels,
                targets):
