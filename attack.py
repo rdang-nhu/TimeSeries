@@ -38,9 +38,9 @@ class AttackModule(nn.Module):
     def generate_target(self,labels,mode):
 
         if mode == "double":
-            target = 2*labels
+            target = 1.5*labels
         elif mode == "zero":
-            target = torch.zeros(labels.shape,device=self.params.device)
+            target = 0.5*labels
         else:
             raise Exception("No such mode")
 
