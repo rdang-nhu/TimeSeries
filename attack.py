@@ -364,7 +364,7 @@ class Attack():
                     test_batch = test_batch.permute(1, 0, 2).to(torch.float32).to(params.device)
                     id_batch = id_batch.unsqueeze(0).to(params.device)
                     v_batch = v.to(torch.float32).to(params.device)
-                    test_labels = labels.to(torch.float32).to(params.device)[:,-1]
+                    test_labels = labels.to(torch.float32).to(params.device)[:,params.target]
 
                     #print(v_batch[:],torch.mean(labels,dim=0))
 

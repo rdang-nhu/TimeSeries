@@ -26,7 +26,7 @@ class AttackLoss(nn.Module):
     def forward(self, perturbation, output, target):
 
 
-        output = output[:,-1] / self.v_batch[:,0]
+        output = output[:,self.params.target] / self.v_batch[:,0]
 
         target_normalized = target / self.v_batch[:,0]
 
@@ -88,6 +88,8 @@ def set_params():
                         help='Batch size for perturbation generation')
     parser.add_argument('--n_iterations', type=int, default=1000,
                         help='Number of iterations for attack')
+    parser.add_argument('--target', type=int, default=-7,
+                        help='Attacking output time')
     parser.add_argument('--tolerance', nargs='+', type=float, default=[0.01, 0.1, 1],
                         help='Max perturbation L2 norm')
 
@@ -114,6 +116,7 @@ def set_params():
     params.learning_rate = args.lr
     params.output_folder = os.path.join("attack_logs",args.output_folder)
     params.batch_c = args.batch_c
+    params.target = args.target
 
     if not os.path.exists(params.output_folder):
         os.makedirs(params.output_folder)

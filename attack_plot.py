@@ -56,8 +56,8 @@ def plot_batch(original_mu ,original_sigma,
 
                 k = nrows * k1 + k0
 
-                ax[k0][k1].plot(x[params["predict_start"]:],
-                           original_mu_chosen[k], color='b')
+                #ax[k0][k1].plot(x[params["predict_start"]:],
+                #           original_mu_chosen[k], color='b')
                 ax[k0][k1].fill_between(x[params["predict_start"]:],
                                    original_mu_chosen[k] - \
                                    2 * original_sigma_chosen[k],
@@ -79,19 +79,22 @@ def plot_batch(original_mu ,original_sigma,
 
                 #print(double_pert[:params["predict_start"]+2,0])
 
-                ax[k0][k1].plot(x[:params["predict_start"]], label_plot[k, :params["predict_start"]] *
-                           double_pert[:params["predict_start"] ,k], color='y')
-                ax[k0][k1].plot(x[:params["predict_start"]:], label_plot[k, :params["predict_start"]] *
-                           zero_pert[:params["predict_start"] ,k], color='purple')
+                #ax[k0][k1].plot(x[:params["predict_start"]], label_plot[k, :params["predict_start"]] *
+                #           double_pert[:params["predict_start"] ,k], color='y')
+                #ax[k0][k1].plot(x[:params["predict_start"]:], label_plot[k, :params["predict_start"]] *
+                #           zero_pert[:params["predict_start"] ,k], color='purple')
 
                 ax[k0][k1].axhline(plot_target_double[k], color='orange', linestyle='dashed')
                 ax[k0][k1].axhline(plot_target_zero[k], color='orange', linestyle='dashed')
 
-                ax[k0][k1].plot(x, label_plot[k, :], color='r')
-                ax[k0][k1].axhline(label_plot[k, -1], color='b', linestyle='dashed')
-                ax[k0][k1].axhline(label_plot[k, -2], color='g', linestyle='dashed')
-                ax[k0][k1].axhline(label_plot[k, -3], color='black', linestyle='dashed')
+                ax[k0][k1].plot(x[params["predict_start"]:], label_plot[k, params["predict_start"]:], color='r')
+                #ax[k0][k1].axhline(label_plot[k, -4], color='b', linestyle='dashed')
+                ax[k0][k1].axhline(label_plot[k, 185], color='g', linestyle='dashed')
+                ax[k0][k1].axhline(label_plot[k, -7], color='black', linestyle='dashed')
                 ax[k0][k1].axvline(params["predict_start"], color='g', linestyle='dashed')
+
+                ax[k0][k1].set_ylim(ymin=0)
+                ax[k0][k1].grid()
 
         # ax[k].set_title(plot_metrics_str, fontsize=10)
 
