@@ -19,6 +19,7 @@ class AttackLoss(nn.Module):
         self.c = c
         self.device = params.device
         self.v_batch = v_batch
+        self.params = params
 
     # perturbation has shape (nSteps,)
     # output has shape (nSteps,batch_size,output_dim)
