@@ -25,11 +25,15 @@ def plot_batch(original_mu ,original_sigma,
     #                                   relative=params.relative_metrics)
 
 
+    nrows = 3
+    ncols = 3
+    size = nrows*ncols
+
     all_samples = np.arange(batch_size)
     if batch_size < 12:  # make sure there are enough unique samples to choose bottom 90 from
-        random_sample = np.random.choice(all_samples, size=10, replace=True)
+        random_sample = np.random.choice(all_samples, size=size, replace=True)
     else:
-        random_sample = np.random.choice(all_samples, size=10, replace=False)
+        random_sample = np.random.choice(all_samples, size=size, replace=False)
 
     label_plot = labels[random_sample]
     original_mu_chosen = original_mu[random_sample]
@@ -41,47 +45,53 @@ def plot_batch(original_mu ,original_sigma,
 
     x = np.arange(params["test_window"])
 
-    nrows = 10
-    ncols = 1
 
     for tolerance in range(perturbed_output_mu["double"].shape[0]):
-        f = plt.figure(figsize=(8, 42), constrained_layout=True)
+        f = plt.figure(figsize=(20,10), constrained_layout=True)
         ax = f.subplots(nrows, ncols)
 
-        for k in range(nrows):
+        for k0 in range(nrows):
 
-            ax[k].plot(x[params["predict_start"]:],
-                       original_mu_chosen[k], color='b')
-            ax[k].fill_between(x[params["predict_start"]:],
-                               original_mu_chosen[k] - \
-                               2 * original_sigma_chosen[k],
-                               original_mu_chosen[k] + \
-                               2 * original_sigma_chosen[k], color='blue',
-                               alpha=0.2)
+            for k1 in range(ncols):
 
-            double_mu_chosen = perturbed_output_mu["double"][tolerance][random_sample]
-            zero_mu_chosen = perturbed_output_mu["zero"][tolerance][random_sample]
+                k = nrows * k1 + k0
 
-            ax[k].plot(x[params["predict_start"]:],
-                       double_mu_chosen[k], color='black')
+                ax[k0][k1].plot(x[params["predict_start"]:],
+                           original_mu_chosen[k], color='b')
+                ax[k0][k1].fill_between(x[params["predict_start"]:],
+                                   original_mu_chosen[k] - \
+                                   2 * original_sigma_chosen[k],
+                                   original_mu_chosen[k] + \
+                                   2 * original_sigma_chosen[k], color='blue',
+                                   alpha=0.2)
 
-            ax[k].plot(x[params["predict_start"]:],
-                       zero_mu_chosen[k], color='brown')
+                double_mu_chosen = perturbed_output_mu["double"][tolerance][random_sample]
+                zero_mu_chosen = perturbed_output_mu["zero"][tolerance][random_sample]
 
-            double_pert = ( 1 +best_perturbation["double"][tolerance][: ,random_sample])
-            zero_pert = (1 + best_perturbation["zero"][tolerance][: ,random_sample])
+                ax[k0][k1].plot(x[params["predict_start"]:],
+                           double_mu_chosen[k], color='black')
 
+                ax[k0][k1].plot(x[params["predict_start"]:],
+                           zero_mu_chosen[k], color='brown')
 
-            ax[k].plot(x[:params["predict_start"]], label_plot[k, :params["predict_start"]] *
-                       double_pert[:params["predict_start"] ,k], color='y')
-            ax[k].plot(x[:params["predict_start"]:], label_plot[k, :params["predict_start"]] *
-                       zero_pert[:params["predict_start"] ,k], color='purple')
+                double_pert = ( 1 +best_perturbation["double"][tolerance][1: ,random_sample])
+                zero_pert = (1 + best_perturbation["zero"][tolerance][1: ,random_sample])
 
-            ax[k].axhline(plot_target_double[k], color='orange', linestyle='dashed')
-            ax[k].axhline(plot_target_zero[k], color='orange', linestyle='dashed')
+                #print(double_pert[:params["predict_start"]+2,0])
 
-            ax[k].plot(x, label_plot[k, :], color='r')
-            ax[k].axvline(params["predict_start"], color='g', linestyle='dashed')
+                ax[k0][k1].plot(x[:params["predict_start"]], label_plot[k, :params["predict_start"]] *
+                           double_pert[:params["predict_start"] ,k], color='y')
+                ax[k0][k1].plot(x[:params["predict_start"]:], label_plot[k, :params["predict_start"]] *
+                           zero_pert[:params["predict_start"] ,k], color='purple')
+
+                ax[k0][k1].axhline(plot_target_double[k], color='orange', linestyle='dashed')
+                ax[k0][k1].axhline(plot_target_zero[k], color='orange', linestyle='dashed')
+
+                ax[k0][k1].plot(x, label_plot[k, :], color='r')
+                ax[k0][k1].axhline(label_plot[k, -1], color='b', linestyle='dashed')
+                ax[k0][k1].axhline(label_plot[k, -2], color='g', linestyle='dashed')
+                ax[k0][k1].axhline(label_plot[k, -3], color='black', linestyle='dashed')
+                ax[k0][k1].axvline(params["predict_start"], color='g', linestyle='dashed')
 
         # ax[k].set_title(plot_metrics_str, fontsize=10)
 
