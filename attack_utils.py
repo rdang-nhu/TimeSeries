@@ -1,9 +1,11 @@
+import h5py
 import torch.nn as nn
 import torch
 
 import logging
 import argparse
 import os
+import json
 
 import model.net as net
 import utils
@@ -111,6 +113,9 @@ def set_params():
     if not os.path.exists(params.output_folder):
         os.makedirs(params.output_folder)
 
+    with open(os.path.join(params.output_folder, "params.txt"), 'w') as param_file:
+        json.dump(params.dict, param_file)
+
     return params,model_dir,args,data_dir
 
 def set_cuda(params,logger):
@@ -129,3 +134,42 @@ def set_cuda(params,logger):
         model = net.Net(params)
 
     return model
+
+class H5pySaver():
+
+    def __init__(self,folder):
+
+        self.subfolder = os.path.join(folder,"raw_data/")
+
+        if not os.path.exists(self.subfolder):
+            os.makedirs(self.subfolder)
+
+    def save_to_file(self, data, name):
+
+        file = os.path.join(self.subfolder,name+'.h5')
+        with h5py.File(file,'w') as hf:
+
+            if isinstance(data,torch.Tensor):
+                data = data.data.cpu().numpy()
+
+            hf.create_dataset(name, data=data)
+
+    def save_dict_to_file(self, data, name):
+
+        for mode in ['double','zero']:
+            self.save_to_file(data[mode],name+"_"+mode)
+
+    def get_from_file(self, name):
+
+        file = os.path.join(self.subfolder, name + '.h5')
+        with h5py.File(file, 'r') as hf:
+            return hf[name][:]
+
+    def get_dict_from_file(self,name):
+
+        data = {}
+
+        for mode in ['double', 'zero']:
+            data[mode] = self.get_from_file(name + "_" + mode)
+
+        return data

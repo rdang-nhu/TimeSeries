@@ -5,8 +5,8 @@ import torch.optim as optim
 from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
 import pandas as pd
+import json
 
-import attack_plot
 import attack_utils
 import utils
 import model.net as net
@@ -197,8 +197,11 @@ class Attack():
             best_distance = {"double": np.full(c_shape, np.inf),
                              "zero": np.full(c_shape, np.inf)}
 
-            perturbed_output_mu = {}
-            perturbed_output_sigma = {}
+            out_shape = (self.max_pert_len,)+ original_mu.shape
+            perturbed_output_mu = {"double": np.zeros(out_shape),
+                                   "zero": np.zeros(out_shape)}
+            perturbed_output_sigma = {"double": np.zeros(out_shape),
+                                      "zero": np.zeros(out_shape)}
 
             modes = ["double", "zero"]
             targets = {}
@@ -206,9 +209,6 @@ class Attack():
             lines = []
 
             for mode in modes:
-
-                perturbed_output_mu[mode] = {}
-                perturbed_output_sigma[mode] = {}
 
                 # Loop on values of c to find successful attack with minimum perturbation
 
@@ -339,26 +339,28 @@ class Attack():
                         perturbed_output_mu, perturbed_output_sigma,targets, lines = \
                         self.attack_batch(test_batch,id_batch,v_batch,test_labels,hidden,cell,estimator)
 
-                    attack_plot.plot_batch(original_mu,
-                                    original_sigma,
-                                    perturbed_output_mu,
-                                    perturbed_output_sigma,
-                                    best_c,
-                                    best_perturbation,
-                                    best_distance,
-                                    labels,
-                                    targets,
-                                    params)
+                    # Save results
+                    saver = attack_utils.H5pySaver(params.output_folder)
+
+                    saver.save_to_file(original_mu,'original_mu')
+                    saver.save_to_file(original_sigma, 'original_sigma')
+                    saver.save_dict_to_file(best_c,'best_c')
+                    saver.save_dict_to_file(best_perturbation,'best_perturbation')
+                    saver.save_dict_to_file(best_distance, 'best_distance')
+                    saver.save_dict_to_file(perturbed_output_mu, 'perturbed_output_mu')
+                    saver.save_dict_to_file(perturbed_output_sigma, 'perturbed_output_sigma')
+                    saver.save_dict_to_file(targets, 'targets')
+                    saver.save_to_file(labels,'labels')
 
                     df = pd.DataFrame(lines,columns=["mode","c","norm","distance"])
                     df.to_csv(os.path.join(params.output_folder,"results.csv"))
 
 
+
+
             # Average the performance across batches
 
-            # Save results to dataframe
 
-            # Plots some of adversarial samples
 
 if __name__ == '__main__':
 
@@ -375,7 +377,10 @@ if __name__ == '__main__':
     # Reload weights from the saved file
     utils.load_checkpoint(os.path.join(model_dir, args.restore_file + '.pth.tar'), model)
 
+
     attack = Attack(model, loss_fn, test_loader, params, -1,)
+
+
     test_metrics = attack.attack()
     save_path = os.path.join(model_dir, 'metrics_test_{}.json'.format(args.restore_file))
     #utils.save_dict_to_json(test_metrics, save_path)
