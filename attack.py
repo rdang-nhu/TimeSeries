@@ -129,9 +129,9 @@ class Attack():
         # Differentiate loss with respect to input
         loss.backward()
 
-        if i % 10000 == 0:
-            print("Iteration", i)
-            self.print(i,norm,distance,loss,norm_per_sample.shape[0])
+        #if i % 10000 == 0:
+        #    print("Iteration", i)
+        #    self.print(i,norm,distance,loss,norm_per_sample.shape[0])
 
         # Apply one step of optimizer
         optimizer.step()
@@ -209,6 +209,8 @@ class Attack():
             lines = []
 
             for mode in modes:
+
+                print("mode",mode)
 
                 # Loop on values of c to find successful attack with minimum perturbation
 

@@ -71,7 +71,6 @@ def plot_batch(original_mu ,original_sigma,
             double_pert = ( 1 +best_perturbation["double"][tolerance][: ,random_sample])
             zero_pert = (1 + best_perturbation["zero"][tolerance][: ,random_sample])
 
-            print(double_pert[k])
 
             ax[k].plot(x[:params["predict_start"]], label_plot[k, :params["predict_start"]] *
                        double_pert[:params["predict_start"] ,k], color='y')
