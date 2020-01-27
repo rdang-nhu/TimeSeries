@@ -129,7 +129,7 @@ class Attack():
         # Differentiate loss with respect to input
         loss.backward()
 
-        if i % 100 == 0:
+        if i % 10000 == 0:
             print("Iteration", i)
             self.print(i,norm,distance,loss,norm_per_sample.shape[0])
 
@@ -258,8 +258,7 @@ class Attack():
 
                         #print("numpy perturbation",attack_module.perturbation.data[:,0])
 
-                        print("Final", i)
-                        self.print(i, norm, distance, loss, norm_per_sample.shape[0])
+                        #self.print(i, norm, distance, loss, norm_per_sample.shape[0])
 
                         for l in range(self.max_pert_len):
 
@@ -287,8 +286,8 @@ class Attack():
                                          device=self.params.device).float()
                         _,aux1,aux2 = attack_module()
 
-                        perturbed_output_mu[mode][l] = aux1
-                        perturbed_output_sigma[mode][l] = aux2
+                        perturbed_output_mu[mode][l] = aux1.cpu().numpy()
+                        perturbed_output_sigma[mode][l] = aux2.cpu().numpy()
 
 
             return original_mu,original_sigma,best_c, best_perturbation, \
@@ -302,8 +301,6 @@ class Attack():
             # Choose a batch on with to plot
             # plot_batch = np.random.randint(len(test_loader) - 1)
             plot_batch = 0
-
-            print("params", self.params.predict_steps)
 
             # For each test sample
             # Test_loader:
@@ -332,7 +329,6 @@ class Attack():
                     hidden = model.init_hidden(batch_size)
                     cell = model.init_cell(batch_size)
 
-                    print("Sample", i)
                     #print("label",labels[0,:])
 
                     original_mu,original_sigma,best_c,best_perturbation,best_distance,\
