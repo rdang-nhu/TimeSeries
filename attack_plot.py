@@ -45,10 +45,12 @@ def plot_batch(original_mu ,original_sigma,
 
     x = np.arange(params["test_window"])
 
-
+    target_index = -7
     for tolerance in range(perturbed_output_mu["double"].shape[0]):
         f = plt.figure(figsize=(20,10), constrained_layout=True)
         ax = f.subplots(nrows, ncols)
+
+
 
         for k0 in range(nrows):
 
@@ -56,49 +58,64 @@ def plot_batch(original_mu ,original_sigma,
 
                 k = nrows * k1 + k0
 
-                #ax[k0][k1].plot(x[params["predict_start"]:],
-                #           original_mu_chosen[k], color='b')
-                ax[k0][k1].fill_between(x[params["predict_start"]:],
-                                   original_mu_chosen[k] - \
-                                   2 * original_sigma_chosen[k],
-                                   original_mu_chosen[k] + \
-                                   2 * original_sigma_chosen[k], color='blue',
-                                   alpha=0.2)
+                # Plot original prediction
+                #ax[k0][k1].plot(x[params["predict_start"]:target_index+1],
+                #           original_mu_chosen[k][:target_index+1], color='b')
+
+                # Plot uncertainty
 
                 double_mu_chosen = perturbed_output_mu["double"][tolerance][random_sample]
                 zero_mu_chosen = perturbed_output_mu["zero"][tolerance][random_sample]
+                double_sigma_chosen = perturbed_output_sigma["double"][tolerance][random_sample]
+                zero_sigma_chosen = perturbed_output_sigma["zero"][tolerance][random_sample]
 
-                ax[k0][k1].plot(x[params["predict_start"]:],
-                           double_mu_chosen[k], color='black')
+                #ax[k0][k1].fill_between(x[params["predict_start"]:target_index+1],
+                #                   double_mu_chosen[k][:target_index+1] - \
+                #                    double_sigma_chosen[k][:target_index+1],
+                #                   double_mu_chosen[k][:target_index+1] + \
+                #                    double_sigma_chosen[k][:target_index+1], color='black',
+                #                   alpha=0.2)
 
-                ax[k0][k1].plot(x[params["predict_start"]:],
-                           zero_mu_chosen[k], color='brown')
+                #ax[k0][k1].fill_between(x[params["predict_start"]:target_index + 1],
+                #                        zero_mu_chosen[k][:target_index + 1] - \
+                #                         zero_sigma_chosen[k][:target_index + 1],
+                #                        zero_mu_chosen[k][:target_index + 1] + \
+                #                         zero_sigma_chosen[k][:target_index + 1], color='blue',
+                #                        alpha=0.2)
 
-                double_pert = ( 1 +best_perturbation["double"][tolerance][1: ,random_sample])
-                zero_pert = (1 + best_perturbation["zero"][tolerance][1: ,random_sample])
+                double_pert = (1 + best_perturbation["double"][tolerance][1:, random_sample])
+                zero_pert = (1 + best_perturbation["zero"][tolerance][1:, random_sample])
 
-                #print(double_pert[:params["predict_start"]+2,0])
+                double_aux = label_plot[k, :params["predict_start"]] * double_pert[:params["predict_start"] ,k]
+                zero_aux = label_plot[k, :params["predict_start"]] * zero_pert[:params["predict_start"], k]
 
-                #ax[k0][k1].plot(x[:params["predict_start"]], label_plot[k, :params["predict_start"]] *
-                #           double_pert[:params["predict_start"] ,k], color='y')
-                #ax[k0][k1].plot(x[:params["predict_start"]:], label_plot[k, :params["predict_start"]] *
-                #           zero_pert[:params["predict_start"] ,k], color='purple')
+                # Plot adversarial sample 1
+                ax[k0][k1].plot(x[:target_index+1],
+                           np.concatenate([double_aux,double_mu_chosen[k][:target_index+1]]),
+                                        color='black')
 
-                ax[k0][k1].axhline(plot_target_double[k], color='orange', linestyle='dashed')
-                ax[k0][k1].axhline(plot_target_zero[k], color='orange', linestyle='dashed')
+                # Plot adversarial sample 2
+                ax[k0][k1].plot(x[:target_index + 1],
+                                np.concatenate([zero_aux, zero_mu_chosen[k][:target_index + 1]]),
+                                color='blue')
 
-                ax[k0][k1].plot(x[params["predict_start"]:], label_plot[k, params["predict_start"]:], color='r')
+
+                #ax[k0][k1].axhline(plot_target_double[k], color='orange', linestyle='dashed')
+                #ax[k0][k1].axhline(plot_target_zero[k], color='orange', linestyle='dashed')
+
+                ax[k0][k1].plot(x[:target_index+1], label_plot[k, :target_index+1], color='r')
                 #ax[k0][k1].axhline(label_plot[k, -4], color='b', linestyle='dashed')
-                ax[k0][k1].axhline(label_plot[k, 185], color='g', linestyle='dashed')
-                ax[k0][k1].axhline(label_plot[k, -7], color='black', linestyle='dashed')
                 ax[k0][k1].axvline(params["predict_start"], color='g', linestyle='dashed')
 
                 ax[k0][k1].set_ylim(ymin=0)
                 ax[k0][k1].grid()
 
-        # ax[k].set_title(plot_metrics_str, fontsize=10)
 
-        name = 'plot_tolerance_'+str(params["tolerance"][tolerance])+'.png'
+
+        # ax[k].set_title(plot_metrics_str, fontsize=10)
+        str_tol = str(params["tolerance"][tolerance])
+        plt.suptitle("Tolerance "+str_tol)
+        name = 'plot_tolerance_'+str_tol+'.png'
         f.savefig(os.path.join(params["output_folder"],name))
         plt.close()
 
