@@ -177,6 +177,8 @@ class Attack():
 
     def attack_batch(self, data, id_batch, v_batch, labels, hidden, cell, estimator):
 
+            batch_size = data.shape[1]
+
             with torch.no_grad():
                 _, original_mu, original_sigma = attack_utils.forward_model(model,
                                                                           data,
@@ -214,72 +216,111 @@ class Attack():
 
                 # Loop on values of c to find successful attack with minimum perturbation
 
-                for i in range(len(self.params.c)):
+                for i in range(0, len(self.params.c), self.params.batch_c):
 
-                    c = self.params.c[i]
-                    print("c",c)
+                    bound = min(self.params.batch_c,len(self.params.c)-i)
+                    print("c",self.params.c[i:i+bound])
+
+                    batched_data = data.repeat(1,bound,1)
+
+                    batched_id_batch = id_batch.repeat(1,bound)
+                    batched_v_batch = v_batch.repeat(bound,1)
+                    batched_labels = labels.repeat(bound)
+                    batched_hidden = hidden.repeat(1,bound,1)
+                    batched_cell = cell.repeat(1,bound,1)
+
+                    batched_c = torch.cat([self.params.c[i+j]*\
+                                           torch.ones(batch_size,device=self.params.device)\
+                                           for j in range(bound)],dim = 0)
 
                     # Update the lines
                     attack_module = AttackModule(self.model,
                                                  self.params,
-                                                 c,
-                                                 data,
-                                                 id_batch,
-                                                 v_batch,
-                                                 hidden,
-                                                 cell)
+                                                 batched_c,
+                                                 batched_data,
+                                                 batched_id_batch,
+                                                 batched_v_batch,
+                                                 batched_hidden,
+                                                 batched_cell)
 
-                    target = attack_module.generate_target(labels,mode)
-                    targets[mode] = target
+                    batched_target = attack_module.generate_target(batched_labels,mode)
 
                     optimizer = optim.Adam([attack_module.perturbation], lr=self.params.learning_rate)
 
                     # Iterate steps
-                    for i in range(self.params.n_iterations):
-
+                    for k in range(self.params.n_iterations):
 
                         if estimator == "ours":
-                            self.attack_step_ours(attack_module, optimizer, i, target)
+                            self.attack_step_ours(attack_module, optimizer, k, batched_target)
                         elif estimator == "naive":
-                            self.attack_step_naive(attack_module, optimizer, i, target)
+                            self.attack_step_naive(attack_module, optimizer, k, batched_target)
                         else:
                             raise Exception("No such estimator")
 
                     # Evaluate the attack
                     # Run full number of samples on perturbed input to obtain perturbed output
                     with torch.no_grad():
-                        _,perturbed_output,_ = attack_module()
+                        _,batched_perturbed_output,_ = attack_module()
 
-                        norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
-                            attack_module.attack_loss(attack_module.perturbation, perturbed_output, target)
+                        # Unbatch c to run everything from this
+                        for j in range(bound):
 
-                        # Find
-                        numpy_norm = np.sqrt(utils.convert_from_tensor(norm_per_sample))
-                        numpy_distance = utils.convert_from_tensor(distance_per_sample)
-                        numpy_perturbation = utils.convert_from_tensor(attack_module.perturbation.data)
+                            c = self.params.c[i+j]
 
-                        #print("numpy perturbation",attack_module.perturbation.data[:,0])
+                            left = batch_size*j
+                            right = batch_size*(j+1)
 
-                        #self.print(i, norm, distance, loss, norm_per_sample.shape[0])
+                            target = batched_target[left:right]
+                            targets[mode] = target
 
-                        for l in range(self.max_pert_len):
+                            perturbed_output = batched_perturbed_output[left:right]
+                            v_batch = batched_v_batch[left:right]
 
-                            indexes_best_c = np.logical_and(numpy_norm <= self.params.tolerance[l],
-                                                            numpy_distance < best_distance[mode][l])
+                            loss = attack_utils.AttackLoss(self.params,c,v_batch)
 
-                            best_perturbation[mode][l][:, indexes_best_c] = \
-                                numpy_perturbation[:, indexes_best_c]
-                            best_distance[mode][l, indexes_best_c] = \
-                                numpy_distance[indexes_best_c]
-                            best_c[mode][l, indexes_best_c] = c
+                            norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
+                                loss(attack_module.perturbation[:,left:right],
+                                                          perturbed_output,
+                                                          target)
 
-                        # Save norm and distance for c plot
-                        mean_numpy_norm = np.mean(numpy_norm)
-                        mean_distance = np.mean(np.sqrt(numpy_distance))
+                            # Find
+                            numpy_norm = np.sqrt(utils.convert_from_tensor(norm_per_sample))
+                            numpy_distance = utils.convert_from_tensor(distance_per_sample)
+                            numpy_perturbation = utils.convert_from_tensor(
+                                attack_module.perturbation.data[:,left:right])
 
-                        lines.append([mode,c,mean_numpy_norm,mean_distance])
+                            #print("numpy perturbation",attack_module.perturbation.data[:,0])
+
+                            #self.print(i, norm, distance, loss, norm_per_sample.shape[0])
+
+                            for l in range(self.max_pert_len):
+
+                                indexes_best_c = np.logical_and(numpy_norm <= self.params.tolerance[l],
+                                                                numpy_distance < best_distance[mode][l])
+
+                                best_perturbation[mode][l][:, indexes_best_c] = \
+                                    numpy_perturbation[:, indexes_best_c]
+                                best_distance[mode][l, indexes_best_c] = \
+                                    numpy_distance[indexes_best_c]
+                                best_c[mode][l, indexes_best_c] = c
+
+                            # Save norm and distance for c plot
+                            mean_numpy_norm = np.mean(numpy_norm)
+                            mean_distance = np.mean(np.sqrt(numpy_distance))
+
+                            lines.append([mode,c,mean_numpy_norm,mean_distance])
 
                 with torch.no_grad():
+
+                    # Update the lines
+                    attack_module = AttackModule(self.model,
+                                                 self.params,
+                                                 0,
+                                                 data,
+                                                 id_batch,
+                                                 v_batch,
+                                                 hidden,
+                                                 cell)
 
                     for l in range(self.max_pert_len):
 

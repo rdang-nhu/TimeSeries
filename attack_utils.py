@@ -25,6 +25,7 @@ class AttackLoss(nn.Module):
     # for the moment, target has shape (batch_size,output_dim)
     def forward(self, perturbation, output, target):
 
+
         output = output[:,-1] / self.v_batch[:,0]
 
         target_normalized = target / self.v_batch[:,0]
@@ -40,7 +41,7 @@ class AttackLoss(nn.Module):
         norm = norm_per_sample.sum(0)
 
         loss_per_sample = norm_per_sample + self.c * distance_per_sample
-        loss = norm + self.c * distance
+        loss = loss_per_sample.sum(0)
 
         return norm_per_sample,distance_per_sample,loss_per_sample,norm,distance,loss
 
@@ -92,6 +93,9 @@ def set_params():
 
     parser.add_argument('--debug', action="store_true", help='Debug mode')
 
+    # Batching
+    parser.add_argument('--batch_c', type=int, default=1, help='Number of c values batched together')
+
     # Load the parameters
     args = parser.parse_args()
     model_dir = os.path.join('experiments', args.model_name)
@@ -109,6 +113,7 @@ def set_params():
     params.batch_size = args.batch_size
     params.learning_rate = args.lr
     params.output_folder = os.path.join("attack_logs",args.output_folder)
+    params.batch_c = args.batch_c
 
     if not os.path.exists(params.output_folder):
         os.makedirs(params.output_folder)
