@@ -57,9 +57,19 @@ def plot_batch(original_mu ,original_sigma,
 
                     k = nrows * k1 + k0
 
-                    ax[k0][k1].plot(x[:target_index + 1], label_plot[k, :target_index + 1],
+
+                    ax[k0][k1].plot(x[:target_index + 1],
+                                    np.concatenate([label_plot[k,:params["predict_start"]],
+                                    original_mu_chosen[k][:target_index+1]]),
                                     color='r',
                                     linewidth=4)
+
+                    ax[k0][k1].fill_between(x[params["predict_start"]:target_index + 1],
+                                            original_mu_chosen[k][:target_index + 1] - \
+                                            original_sigma_chosen[k][:target_index + 1],
+                                            original_mu_chosen[k][:target_index + 1] + \
+                                            original_sigma_chosen[k][:target_index + 1], color='r',
+                                            alpha=0.2)
 
                     # Plot original prediction
                     #ax[k0][k1].plot(x[params["predict_start"]:target_index+1],
@@ -96,11 +106,17 @@ def plot_batch(original_mu ,original_sigma,
                     ax[k0][k1].set_ylim(ymin=0)
                     ax[k0][k1].grid()
 
+                    if k0 == 2 and k1 == 1:
+                        ax[k0][k1].set_xlabel("Hour")
+
+                    if k0 == 1 and k1 == 0:
+                        ax[k0][k1].set_ylabel("Electricity consumption")
+
 
 
             # ax[k].set_title(plot_metrics_str, fontsize=10)
             str_tol = str(params["tolerance"][tolerance])
-            plt.suptitle("Tolerance "+str_tol)
+            #plt.suptitle("Tolerance "+str_tol)
             name = mode+'_plot_tolerance_'+str_tol+'.png'
             f.savefig(os.path.join(params["output_folder"],name))
             plt.close()
