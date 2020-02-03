@@ -81,7 +81,14 @@ class AttackModule(nn.Module):
 
         aux_estimate = torch.zeros(self.data.shape[1], device=self.params.device)
         for sample in samples:
-            log_prob = self.model.forward_log_prob()
+            log_prob = attack_utils.forward_log_prob(model,
+                                                     sample,
+                                                      perturbed_data,
+                                                      self.id_batch,
+                                                      self.v_batch,
+                                                      self.hidden,
+                                                      self.cell,
+                                                      self.params)
 
             aux_estimate += sample[self.params.target - 1].squeeze(1) * log_prob
 

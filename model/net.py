@@ -10,6 +10,8 @@ import logging
 
 logger = logging.getLogger('DeepAR.Net')
 
+ONEOVERSQRT2PI = 1.0 / math.sqrt(2*math.pi)
+
 class Net(nn.Module):
     def __init__(self, params):
         '''
@@ -117,6 +119,26 @@ class Net(nn.Module):
                 if t < (self.params.predict_steps - 1):
                     x[self.params.predict_start + t + 1, :, 0] = mu_de
             return sample_mu, sample_sigma
+
+    def forward_log_prob(self, x, sample, v_batch, id_batch, hidden, cell):
+
+        batch_size = x.shape[1]
+        prob = torch.ones( batch_size, device=self.params.device)
+
+        decoder_hidden = hidden
+        decoder_cell = cell
+        for t in range(self.params.predict_steps):
+            mu_de, sigma_de, decoder_hidden, decoder_cell = self(
+                x[self.params.predict_start + t].unsqueeze(0),
+                id_batch, decoder_hidden, decoder_cell)
+
+            normalized_value = (sample[t] - v_batch[:,1])*v_batch[:,0]
+
+            ret = ONEOVERSQRT2PI * torch.exp(-0.5 * ((normalized_value - mu_de) / sigma_de) ** 2) / sigma_de
+            ret += 1e-8
+            prob *= ret
+
+        return torch.log(prob)
 
 
 def loss_fn(mu: Variable, sigma: Variable, labels: Variable):
