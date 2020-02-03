@@ -90,6 +90,8 @@ class AttackModule(nn.Module):
                                             hidden,
                                             cell)
 
+            print("hidden grad", hidden.requires_grad)
+
         for i in range(samples.shape[0]):
             sample = samples[i]
             log_prob = attack_utils.forward_log_prob(model,

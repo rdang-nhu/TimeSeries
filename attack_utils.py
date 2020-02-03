@@ -57,7 +57,6 @@ def forward_model(model,data,id_batch,v_batch,hidden,cell,params):
 
         mu, sigma, hidden, cell = model(data[t].unsqueeze(0), id_batch, hidden, cell)
 
-    print("hidden grad",hidden.requires_grad)
 
     samples, sample_mu, sample_sigma = model.test(data,
                                                   v_batch,
