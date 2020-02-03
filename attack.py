@@ -90,7 +90,7 @@ class AttackModule(nn.Module):
                                             hidden,
                                             cell)
 
-            print("hidden grad", hidden.requires_grad)
+        print("hidden grad", hidden.requires_grad)
 
         for i in range(samples.shape[0]):
             sample = samples[i]
