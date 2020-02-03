@@ -66,14 +66,26 @@ class AttackModule(nn.Module):
     # Not clear yet how to compute that
     def forward_naive(self):
 
-        # Forward pass on all samples
-        aux_estimate = torch.zeros(batch,device=self.model.device)
-        for i in range(n_samples):
+        perturbed_data = torch.zeros(self.data.shape).to(self.params.device)
+        perturbed_data[:, :, 0] = self.data[:, :, 0] * (1 + self.perturbation)
+        perturbed_data[:, :, 1:] = self.data[:, :, 1:]
+
+        with torch.no_grad():
+            samples, sample_mu,_ = attack_utils.forward_model(model,
+                                                              perturbed_data,
+                                                              self.id_batch,
+                                                              self.v_batch,
+                                                              self.hidden,
+                                                              self.cell,
+                                                              self.params)
+
+        aux_estimate = torch.zeros(self.data.shape[1], device=self.model.device)
+        for sample in samples:
             log_prob = self.model.forward_log_prob()
 
-            aux_estimate += outputs[i, :,self.args.steps-1].squeeze(1)*log_prob
+            aux_estimate += sample[self.params.target - 1].squeeze(1) * log_prob
 
-        aux_estimate /= float(n_samples)
+        aux_estimate /= float(samples.shape[0])
         aux_estimate = aux_estimate.sum(0)
 
         return sample_mu,aux_estimate
@@ -149,13 +161,10 @@ class Attack():
         # Compute the derivative of the loss with respect to the mean
         mean.requires_grad = True
         attack_module.perturbation.requires_grad = False
-        norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
-            attack_module.attack_loss(attack_module.perturbation, mean, target)
+        _,_,_,_,_, loss = attack_module.attack_loss(attack_module.perturbation, mean, target)
 
         # This propagates the gradient to the mean
         loss.backward()
-
-        # Compute grad of aux estimate
 
         # Multiply the two, and set it in perturbation
         attack_module.perturbation.grad *= mean.grad.unsqueeze(-1)
@@ -163,12 +172,15 @@ class Attack():
         # Compute the derivative of the loss with respect to the norm
         mean.requires_grad = False
         attack_module.perturbation.requires_grad = True
-        norm_per_sample, distance_per_sample, loss_per_sample, norm, distance, loss = \
+        norm_per_sample,_,_,norm,distance, loss = \
             attack_module.attack_loss(attack_module.perturbation, mean, target)
 
         # This propagates the gradient to the norm
         loss.backward()
 
+        if i % 1 == 0:
+            print("Iteration", i)
+            self.print(i,norm,distance,loss,norm_per_sample.shape[0])
 
         # Apply one step of optimizer
         optimizer.step()
@@ -339,7 +351,7 @@ class Attack():
 
     def attack(self):
 
-        for estimator in ["ours"]:
+        for estimator in ["naive","ours"]:
 
             # Choose a batch on with to plot
             # plot_batch = np.random.randint(len(test_loader) - 1)

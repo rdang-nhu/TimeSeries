@@ -11,6 +11,51 @@ import os
 import json
 import numpy as np
 
+
+
+def plot_quantiles(original_mu ,original_sigma,
+               perturbed_output_mu, perturbed_output_sigma,
+               best_c, best_perturbation ,best_distance, labels,
+               targets, params):
+
+    percentages = np.array([10,20,30,40,50,60,70,80,90])
+    target_index = -2
+
+    ref = original_mu[:, target_index]
+
+    #colors = ['r','b','black','green','yellow','brown','orange']
+
+    for tolerance in range(6):
+
+        #color = colors[tolerance]
+
+        for mode in ["zero"]:
+
+            str_tol = str(params["tolerance"][tolerance])
+
+            values = perturbed_output_mu[mode][tolerance,:,target_index]
+
+            normalized_values = values/ref
+
+            quantiles = [ np.percentile(normalized_values,p) for p in percentages]
+
+            if mode == "zero":
+                plt.plot(percentages, np.flip(quantiles,axis=0), label=str_tol)
+            else:
+                plt.plot(percentages,quantiles,label=str_tol)
+
+    if mode == "zero":
+        plt.xticks(percentages,np.flip(percentages,axis=0))
+
+    else:
+        plt.xticks(percentages)
+    plt.grid()
+    plt.legend()
+    name = 'result.pdf'
+    plt.savefig(os.path.join(params["output_folder"], name))
+
+
+
 def plot_batch(original_mu ,original_sigma,
                perturbed_output_mu, perturbed_output_sigma,
                best_c, best_perturbation ,best_distance, labels,
@@ -46,7 +91,7 @@ def plot_batch(original_mu ,original_sigma,
 
         x = np.arange(params["test_window"])
 
-        target_index = -7
+        target_index = -2
         for tolerance in range(perturbed_output_mu["double"].shape[0]):
             f = plt.figure(figsize=(20,7), constrained_layout=True)
             ax = f.subplots(nrows, ncols)
@@ -147,6 +192,17 @@ if __name__ == '__main__':
 
     with open(os.path.join(folder,"params.txt")) as json_file:
         params = json.load(json_file)
+
+    plot_quantiles(original_mu,
+               original_sigma,
+               perturbed_output_mu,
+               perturbed_output_sigma,
+               best_c,
+               best_perturbation,
+               best_distance,
+               labels,
+               targets,
+               params)
 
     # Call plotting function
     plot_batch(original_mu,
