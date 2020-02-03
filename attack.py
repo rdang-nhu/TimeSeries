@@ -291,8 +291,9 @@ class Attack():
 
                         if estimator == "ours":
                             self.attack_step_ours(attack_module, optimizer, k, batched_target)
-                        elif estimator == "naive":
-                            self.attack_step_naive(attack_module, optimizer, k, batched_target)
+                        elif estimator == "naive:
+                            with torch.autograd.detect_anomaly():
+                                self.attack_step_naive(attack_module, optimizer, k, batched_target)
                         else:
                             raise Exception("No such estimator")
 
