@@ -196,10 +196,12 @@ class Attack():
         norm_per_sample,_,_,norm,distance, loss = \
             attack_module.attack_loss(attack_module.perturbation, mean, target)
 
-        print("attack pert grad 2", attack_module.perturbation.grad[:, 0])
 
         # This propagates the gradient to the norm
         loss.backward()
+
+
+        print("attack pert grad 2", attack_module.perturbation.grad[:, 0])
 
         if i % 1 == 0:
             print("Iteration", i)
