@@ -129,7 +129,7 @@ class Net(nn.Module):
         decoder_cell = cell
         for t in range(self.params.predict_steps):
             mu_de, sigma_de, decoder_hidden, decoder_cell = self(
-                sample[:,t].unsqueeze(0),
+                x[self.params.predict_start + t].unsqueeze(0),
                 id_batch, decoder_hidden, decoder_cell)
 
             normalized_value = (sample[:,t] - v_batch[:,1])/v_batch[:,0]
@@ -137,6 +137,8 @@ class Net(nn.Module):
             ret = ONEOVERSQRT2PI * torch.exp(-0.5 * ((normalized_value - mu_de) / sigma_de) ** 2) / sigma_de
             ret += 1e-8
             prob *= ret
+            if t < (self.params.predict_steps - 1):
+                x[self.params.predict_start + t + 1, :, 0] = sample[t+1]
 
         return torch.log(prob)
 
