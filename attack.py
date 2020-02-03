@@ -191,7 +191,7 @@ class Attack():
         attack_module.perturbation.grad *= mean.grad[:,self.params.target]
 
 
-        print("attack pert grad 1",attack_module.perturbation.grad[:,0])
+        print("attack pert grad 1",np.all(attack_module.perturbation.grad.detach().cpu().numpy() == 0.))
 
         # Compute the derivative of the loss with respect to the norm
         mean.requires_grad = False
@@ -202,7 +202,6 @@ class Attack():
 
         # This propagates the gradient to the norm
         loss.backward()
-
 
         print("attack pert grad 2", attack_module.perturbation.grad[:, 0])
 
