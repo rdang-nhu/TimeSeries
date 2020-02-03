@@ -79,7 +79,7 @@ class AttackModule(nn.Module):
                                                               self.cell,
                                                               self.params)
 
-        aux_estimate = torch.zeros(self.data.shape[1], device=self.model.device)
+        aux_estimate = torch.zeros(self.data.shape[1], device=self.params.device)
         for sample in samples:
             log_prob = self.model.forward_log_prob()
 
@@ -320,7 +320,7 @@ class Attack():
                             mean_numpy_norm = np.mean(numpy_norm)
                             mean_distance = np.mean(np.sqrt(numpy_distance))
 
-                            lines.append([mode,c,mean_numpy_norm,mean_distance])
+                            lines.append([estimator,mode,c,mean_numpy_norm,mean_distance])
 
                 with torch.no_grad():
 
@@ -388,7 +388,8 @@ class Attack():
 
                     original_mu,original_sigma,best_c,best_perturbation,best_distance,\
                         perturbed_output_mu, perturbed_output_sigma,targets, lines = \
-                        self.attack_batch(test_batch,id_batch,v_batch,test_labels,hidden,cell,estimator)
+                        self.attack_batch(test_batch,id_batch,v_batch,
+                                          test_labels,hidden,cell,estimator)
 
                     # Save results
                     saver = attack_utils.H5pySaver(params.output_folder)
