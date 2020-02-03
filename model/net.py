@@ -138,6 +138,8 @@ class Net(nn.Module):
             ret += 1e-8
             prob *= ret
 
+        print(prob.grad)
+
         return torch.log(prob)
 
 
