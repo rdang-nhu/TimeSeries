@@ -85,7 +85,7 @@ class AttackModule(nn.Module):
         cell = self.cell
         for t in range(self.params.test_predict_start):
 
-            mu, sigma, hidden, cell = model(self.data[t].unsqueeze(0),
+            mu, sigma, hidden, cell = model(perturbed_data[t].unsqueeze(0),
                                             self.id_batch,
                                             hidden,
                                             cell)
