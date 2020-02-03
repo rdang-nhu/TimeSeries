@@ -138,7 +138,7 @@ class Net(nn.Module):
             ret += 1e-8
             prob *= ret
             if t < (self.params.predict_steps - 1):
-                x[self.params.predict_start + t + 1, :, 0] = sample[t+1]
+                x[self.params.predict_start + t + 1, :, 0] = sample[:,t+1]
 
         return torch.log(prob)
 
