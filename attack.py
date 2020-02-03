@@ -81,6 +81,16 @@ class AttackModule(nn.Module):
 
         aux_estimate = torch.zeros(self.data.shape[1], device=self.params.device)
         print(samples.shape)
+
+        hidden = self.hidden
+        cell = self.cell
+        for t in range(self.params.test_predict_start):
+
+            mu, sigma, hidden, cell = model(self.data[t].unsqueeze(0),
+                                            self.id_batch,
+                                            hidden,
+                                            cell)
+
         for i in range(samples.shape[0]):
             print("i",i)
             sample = samples[i]
@@ -89,8 +99,8 @@ class AttackModule(nn.Module):
                                                       perturbed_data,
                                                       self.id_batch,
                                                       self.v_batch,
-                                                      self.hidden,
-                                                      self.cell,
+                                                      hidden,
+                                                      cell,
                                                       self.params)
 
             aux_estimate += sample[:,self.params.target - 1] * log_prob

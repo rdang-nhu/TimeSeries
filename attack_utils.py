@@ -68,13 +68,7 @@ def forward_model(model,data,id_batch,v_batch,hidden,cell,params):
 
 def forward_log_prob(model,sample,data,id_batch,v_batch,hidden,cell,params):
 
-    for t in range(params.test_predict_start):
-        # if z_t is missing, replace it by output mu from the last time step
-        zero_index = (data[t, :, 0] == 0)
-        if t > 0 and torch.sum(zero_index) > 0:
-            data[t, zero_index, 0] = mu[zero_index]
 
-        mu, sigma, hidden, cell = model(data[t].unsqueeze(0), id_batch, hidden, cell)
 
     log_prob = model.forward_log_prob(data,
                           sample,
