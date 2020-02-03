@@ -68,8 +68,6 @@ def forward_model(model,data,id_batch,v_batch,hidden,cell,params):
 
 def forward_log_prob(model,sample,data,id_batch,v_batch,hidden,cell,params):
 
-
-
     log_prob = model.forward_log_prob(data,
                           sample,
                           v_batch,
