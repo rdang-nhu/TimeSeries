@@ -132,7 +132,7 @@ class Net(nn.Module):
                 x[self.params.predict_start + t].unsqueeze(0),
                 id_batch, decoder_hidden, decoder_cell)
 
-            normalized_value = (sample[:,t] - v_batch[:,1])/v_batch[:,0]
+            normalized_value = (sample[:,t] - v_batch[:,1])/(v_batch[:,0] + 1e-5)
 
             ret = ONEOVERSQRT2PI * torch.exp(-0.5 * ((normalized_value - mu_de) / sigma_de) ** 2) / sigma_de
             ret += 1e-8
