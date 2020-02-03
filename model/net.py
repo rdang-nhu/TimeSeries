@@ -129,7 +129,7 @@ class Net(nn.Module):
         decoder_cell = cell
         for t in range(self.params.predict_steps):
             mu_de, sigma_de, decoder_hidden, decoder_cell = self(
-                x[self.params.predict_start + t].unsqueeze(0),
+                sample[:,t].unsqueeze(0),
                 id_batch, decoder_hidden, decoder_cell)
 
             normalized_value = (sample[:,t] - v_batch[:,1])/v_batch[:,0]
