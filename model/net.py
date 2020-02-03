@@ -134,6 +134,8 @@ class Net(nn.Module):
 
             normalized_value = (sample[:,t] - v_batch[:,1])/v_batch[:,0]
 
+            print(-0.5 * ((normalized_value - mu_de) / sigma_de) ** 2)
+
             ret = ONEOVERSQRT2PI * torch.exp(-0.5 * ((normalized_value - mu_de) / sigma_de) ** 2) / sigma_de
             ret += 1e-8
             prob *= ret
