@@ -134,7 +134,7 @@ class Net(nn.Module):
 
             print("sample shape",sample[t].shape)
             print("v shape",v_batch.shape)
-            normalized_value = (sample[t] - v_batch[:,1])*v_batch[:,0]
+            normalized_value = (sample[:,t] - v_batch[:,1])*v_batch[:,0]
 
             ret = ONEOVERSQRT2PI * torch.exp(-0.5 * ((normalized_value - mu_de) / sigma_de) ** 2) / sigma_de
             ret += 1e-8
