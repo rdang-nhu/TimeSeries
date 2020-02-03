@@ -92,7 +92,7 @@ class AttackModule(nn.Module):
                                                       self.cell,
                                                       self.params)
 
-            aux_estimate += sample[self.params.target - 1].squeeze(1) * log_prob
+            aux_estimate += sample[:,self.params.target - 1] * log_prob
 
         aux_estimate /= float(samples.shape[0])
         aux_estimate = aux_estimate.sum(0)
