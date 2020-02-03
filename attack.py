@@ -101,7 +101,7 @@ class AttackModule(nn.Module):
                                                       cell,
                                                       self.params)
 
-            aux_estimate += sample[:,self.params.target - 1] * log_prob
+            aux_estimate += sample[:,self.params.target] * log_prob
 
         aux_estimate /= float(samples.shape[0])
         aux_estimate = aux_estimate.sum(0)
@@ -184,7 +184,7 @@ class Attack():
         # This propagates the gradient to the mean
         loss.backward()
 
-        print("mean grad",mean.grad[:,self.params.target-1])
+        print("mean grad",mean.grad[:,self.params.target])
         print("attack pert grad",attack_module.perturbation.shape)
 
         # Multiply the two, and set it in perturbation
