@@ -106,7 +106,7 @@ class AttackModule(nn.Module):
         aux_estimate /= float(samples.shape[0])
         aux_estimate = aux_estimate.sum(0)
 
-        return sample_mu[self.params.target - 1],aux_estimate
+        return sample_mu,aux_estimate
 
 
 class Attack():
@@ -185,7 +185,7 @@ class Attack():
         loss.backward()
 
         # Multiply the two, and set it in perturbation
-        attack_module.perturbation.grad *= mean.grad.unsqueeze(-1)
+        attack_module.perturbation.grad *= mean.grad[self.params.target-1]
 
         # Compute the derivative of the loss with respect to the norm
         mean.requires_grad = False
