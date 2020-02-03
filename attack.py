@@ -188,7 +188,7 @@ class Attack():
         print("attack pert grad",attack_module.perturbation.grad[0])
 
         # Multiply the two, and set it in perturbation
-        attack_module.perturbation.grad *= mean.grad[:,self.params.target-1]
+        attack_module.perturbation.grad *= mean.grad[:,self.params.target]
 
         # Compute the derivative of the loss with respect to the norm
         mean.requires_grad = False
