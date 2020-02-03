@@ -138,7 +138,8 @@ class Net(nn.Module):
             ret += 1e-8
             prob *= ret
 
-        print(prob)
+            print(prob)
+            assert(np.all(prob <= 1))
 
         return torch.log(prob)
 
