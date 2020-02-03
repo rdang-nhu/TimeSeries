@@ -80,7 +80,6 @@ class AttackModule(nn.Module):
                                                               self.params)
 
         aux_estimate = torch.zeros(self.data.shape[1], device=self.params.device)
-        print(samples.shape)
 
         hidden = self.hidden
         cell = self.cell
@@ -92,7 +91,6 @@ class AttackModule(nn.Module):
                                             cell)
 
         for i in range(samples.shape[0]):
-            print("i",i)
             sample = samples[i]
             log_prob = attack_utils.forward_log_prob(model,
                                                      sample,
@@ -108,7 +106,7 @@ class AttackModule(nn.Module):
         aux_estimate /= float(samples.shape[0])
         aux_estimate = aux_estimate.sum(0)
 
-        return sample_mu,aux_estimate
+        return sample_mu[self.params.target - 1],aux_estimate
 
 
 class Attack():
