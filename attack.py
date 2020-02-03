@@ -185,7 +185,7 @@ class Attack():
         loss.backward()
 
         print("mean grad",mean.grad[:,self.params.target])
-        print("attack pert grad",attack_module.perturbation.shape)
+        print("attack pert grad",attack_module.perturbation.grad[0])
 
         # Multiply the two, and set it in perturbation
         attack_module.perturbation.grad *= mean.grad[:,self.params.target-1]
