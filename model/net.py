@@ -139,7 +139,7 @@ class Net(nn.Module):
             prob *= ret
 
             print(prob)
-            assert(np.all(prob <= 1))
+            assert(np.all(prob.detach().cpu() <= 1))
 
         return torch.log(prob)
 
