@@ -186,11 +186,12 @@ class Attack():
         # This propagates the gradient to the mean
         loss.backward()
 
-        print("mean grad",mean.grad[:,self.params.target])
-        print("attack pert grad 1",attack_module.perturbation.grad[:,0])
 
         # Multiply the two, and set it in perturbation
         attack_module.perturbation.grad *= mean.grad[:,self.params.target]
+
+
+        print("attack pert grad 1",attack_module.perturbation.grad[:,0])
 
         # Compute the derivative of the loss with respect to the norm
         mean.requires_grad = False
