@@ -176,7 +176,7 @@ class Attack():
 
         aux_estimate.backward()
 
-        print("attack pert grad 0",attack_module.perturbation.grad[:,0])
+        #print("attack pert grad 0",attack_module.perturbation.grad[:,0])
 
         # Compute the derivative of the loss with respect to the mean
         mean.requires_grad = True
@@ -191,7 +191,7 @@ class Attack():
         attack_module.perturbation.grad *= mean.grad[:,self.params.target]
 
         detached_pert = attack_module.perturbation.grad.detach().cpu().numpy()
-        print("attack pert grad 1", detached_pert[detached_pert != 0.].shape)
+        #print("attack pert grad 1", detached_pert[detached_pert != 0.].shape)
 
         # Compute the derivative of the loss with respect to the norm
         mean.requires_grad = False
@@ -203,7 +203,7 @@ class Attack():
         # This propagates the gradient to the norm
         loss.backward()
 
-        print("attack pert grad 2", attack_module.perturbation.grad[:, 0])
+        #print("attack pert grad 2", attack_module.perturbation.grad[:, 0])
 
         if i % 1 == 0:
             print("Iteration", i)
