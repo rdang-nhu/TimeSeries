@@ -90,8 +90,9 @@ class Net(nn.Module):
                 decoder_hidden = hidden
                 decoder_cell = cell
                 for t in range(self.params.predict_steps):
-                    mu_de, sigma_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
-                                                                         id_batch, decoder_hidden, decoder_cell)
+                    mu_de, sigma_de, decoder_hidden, decoder_cell = \
+                        self(x[self.params.predict_start + t].unsqueeze(0),
+                            id_batch, decoder_hidden, decoder_cell)
 
                     mean = torch.zeros(mu_de.shape,device=self.params.device)
                     dev = torch.ones(mu_de.shape,device=self.params.device)
