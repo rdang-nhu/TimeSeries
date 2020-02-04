@@ -386,6 +386,8 @@ class Attack():
             # id_batch ([batch_size]): one integer denoting the time series id;
             # v ([batch_size, 2]): scaling factor for each window;
             # labels ([batch_size, train_window]): z_{1:T}.
+
+            lines = []
             for i, (test_batch, id_batch, v, labels) in enumerate(tqdm(self.test_loader)):
                 if i == plot_batch:
 
@@ -410,25 +412,26 @@ class Attack():
                     #print("label",labels[0,:])
 
                     original_mu,original_sigma,best_c,best_perturbation,best_distance,\
-                        perturbed_output_mu, perturbed_output_sigma,targets, lines = \
+                        perturbed_output_mu, perturbed_output_sigma,targets, l = \
                         self.attack_batch(test_batch,id_batch,v_batch,
                                           test_labels,hidden,cell,estimator)
+                    lines += l
 
                     # Save results
                     saver = attack_utils.H5pySaver(params.output_folder)
 
-                    saver.save_to_file(original_mu,'original_mu')
-                    saver.save_to_file(original_sigma, 'original_sigma')
-                    saver.save_dict_to_file(best_c,'best_c')
-                    saver.save_dict_to_file(best_perturbation,'best_perturbation')
-                    saver.save_dict_to_file(best_distance, 'best_distance')
-                    saver.save_dict_to_file(perturbed_output_mu, 'perturbed_output_mu')
-                    saver.save_dict_to_file(perturbed_output_sigma, 'perturbed_output_sigma')
-                    saver.save_dict_to_file(targets, 'targets')
-                    saver.save_to_file(labels,'labels')
+                    saver.save_to_file(original_mu,estimator+'_original_mu')
+                    saver.save_to_file(original_sigma, estimator+'_original_sigma')
+                    saver.save_dict_to_file(best_c,estimator+'_best_c')
+                    saver.save_dict_to_file(best_perturbation,estimator+'_best_perturbation')
+                    saver.save_dict_to_file(best_distance, estimator+'_best_distance')
+                    saver.save_dict_to_file(perturbed_output_mu, estimator+'_perturbed_output_mu')
+                    saver.save_dict_to_file(perturbed_output_sigma, estimator+'_perturbed_output_sigma')
+                    saver.save_dict_to_file(targets, estimator+'_targets')
+                    saver.save_to_file(labels, estimator+'_labels')
 
-                    df = pd.DataFrame(lines,columns=["mode","c","norm","distance"])
-                    df.to_csv(os.path.join(params.output_folder,"results.csv"))
+            df = pd.DataFrame(lines,columns=["estimator","mode","c","norm","distance"])
+            df.to_csv(os.path.join(params.output_folder,"results.csv"))
 
 
 
