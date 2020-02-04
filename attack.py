@@ -374,6 +374,7 @@ class Attack():
 
     def attack(self):
 
+        lines = []
         for estimator in ["naive","ours"]:
 
             # Choose a batch on with to plot
@@ -387,7 +388,6 @@ class Attack():
             # v ([batch_size, 2]): scaling factor for each window;
             # labels ([batch_size, train_window]): z_{1:T}.
 
-            lines = []
             for i, (test_batch, id_batch, v, labels) in enumerate(tqdm(self.test_loader)):
                 if i == plot_batch:
 
@@ -430,13 +430,8 @@ class Attack():
                     saver.save_dict_to_file(targets, estimator+'_targets')
                     saver.save_to_file(labels, estimator+'_labels')
 
-            df = pd.DataFrame(lines,columns=["estimator","mode","c","norm","distance"])
-            df.to_csv(os.path.join(params.output_folder,"results.csv"))
-
-
-
-
-            # Average the performance across batches
+        df = pd.DataFrame(lines,columns=["estimator","mode","c","norm","distance"])
+        df.to_csv(os.path.join(params.output_folder,"results.csv"))
 
 
 
