@@ -90,7 +90,7 @@ class AttackModule(nn.Module):
                                             hidden,
                                             cell)
 
-        print("sample shape",samples.shape[0])
+        print("sample shape",samples.shape)
         for i in range(samples.shape[0]):
             sample = samples[i]
             log_prob = attack_utils.forward_log_prob(model,
