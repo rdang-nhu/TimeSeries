@@ -101,7 +101,6 @@ class AttackModule(nn.Module):
                                                       hidden,
                                                       cell,
                                                       self.params)
-            print(sample[:,self.params.target],log_prob)
             aux_estimate += sample[:,self.params.target] * log_prob
 
         aux_estimate /= float(samples.shape[0])
