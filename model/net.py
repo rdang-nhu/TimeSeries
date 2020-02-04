@@ -136,7 +136,6 @@ class Net(nn.Module):
             normalized_value = (sample[:,t] - v_batch[:,1])/(v_batch[:,0] + 1e-5)
 
             ret =  -0.5 * ((normalized_value - mu_de) / sigma_de) ** 2-torch.log(sigma_de)
-            print("ret",ret)
             log_prob += ret
             if t < (self.params.predict_steps - 1):
                 x[self.params.predict_start + t + 1, :, 0] = sample[:,t+1]
