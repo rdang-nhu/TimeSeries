@@ -200,7 +200,7 @@ class Attack():
 
         #print("attack pert grad 2", attack_module.perturbation.grad[:, 0])
 
-        if i % 1 == 0:
+        if i % 1000 == 0:
             print("Iteration", i)
             self.print(i,norm,distance,loss,norm_per_sample.shape[0])
 
