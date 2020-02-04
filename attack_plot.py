@@ -21,28 +21,40 @@ def plot_quantiles(original_mu ,original_sigma,
     percentages = np.array([10,20,30,40,50,60,70,80,90])
     target_index = -2
 
-    ref = original_mu[:, target_index]
+    ref = original_mu["ours"][:, target_index]
 
-    #colors = ['r','b','black','green','yellow','brown','orange']
+    colors = ['r','b','black','green','yellow','brown','orange']
+
 
     for tolerance in range(6):
 
-        #color = colors[tolerance]
+        str_tol = str(params["tolerance"][tolerance])
+
+        color = colors[tolerance]
 
         for mode in ["zero"]:
 
-            str_tol = str(params["tolerance"][tolerance])
-
-            values = perturbed_output_mu[mode][tolerance,:,target_index]
+            values = perturbed_output_mu["ours"][mode][tolerance,:,target_index]
 
             normalized_values = values/ref
 
             quantiles = [ np.percentile(normalized_values,p) for p in percentages]
 
             if mode == "zero":
-                plt.plot(percentages, np.flip(quantiles,axis=0), label=str_tol)
+                plt.plot(percentages, np.flip(quantiles,axis=0), label=str_tol,color=color)
             else:
-                plt.plot(percentages,quantiles,label=str_tol)
+                plt.plot(percentages,quantiles,label=str_tol,color=color)
+
+            values = perturbed_output_mu["naive"][mode][tolerance, :, target_index]
+
+            normalized_values = values / ref
+
+            quantiles = [np.percentile(normalized_values, p) for p in percentages]
+
+            if mode == "zero":
+                plt.plot(percentages, np.flip(quantiles, axis=0), linestyle="dashed",color=color)
+            else:
+                plt.plot(percentages, quantiles, linestyle = "dashed",color=color)
 
     if mode == "zero":
         plt.xticks(percentages,np.flip(percentages,axis=0))
@@ -180,15 +192,26 @@ if __name__ == '__main__':
     folder = os.path.join("attack_logs",args.output_folder)
     loader = attack_utils.H5pySaver(folder)
 
-    original_mu = loader.get_from_file('original_mu')
-    original_sigma = loader.get_from_file('original_sigma')
-    best_c = loader.get_dict_from_file('best_c')
-    best_perturbation = loader.get_dict_from_file('best_perturbation')
-    best_distance = loader.get_dict_from_file('best_distance')
-    perturbed_output_mu = loader.get_dict_from_file('perturbed_output_mu')
-    perturbed_output_sigma = loader.get_dict_from_file('perturbed_output_sigma')
-    targets = loader.get_dict_from_file('targets')
-    labels = loader.get_from_file('labels')
+    original_mu = {}
+    original_sigma = {}
+    best_c = {}
+    best_perturbation = {}
+    best_distance = {}
+    perturbed_output_mu = {}
+    perturbed_output_sigma = {}
+    targets = {}
+    labels = {}
+
+    for estimator in ["ours","naive"]:
+        original_mu[estimator] = loader.get_from_file(estimator+'_original_mu')
+        original_sigma[estimator] = loader.get_from_file(estimator+'_original_sigma')
+        best_c[estimator] = loader.get_dict_from_file(estimator+'_best_c')
+        best_perturbation[estimator] = loader.get_dict_from_file(estimator+'_best_perturbation')
+        best_distance[estimator] = loader.get_dict_from_file(estimator+'_best_distance')
+        perturbed_output_mu[estimator] = loader.get_dict_from_file(estimator+'_perturbed_output_mu')
+        perturbed_output_sigma[estimator] = loader.get_dict_from_file(estimator+'_perturbed_output_sigma')
+        targets[estimator] = loader.get_dict_from_file(estimator+'_targets')
+        labels[estimator] = loader.get_from_file(estimator+'_labels')
 
     with open(os.path.join(folder,"params.txt")) as json_file:
         params = json.load(json_file)
@@ -205,7 +228,7 @@ if __name__ == '__main__':
                params)
 
     # Call plotting function
-    plot_batch(original_mu,
+    '''plot_batch(original_mu,
                original_sigma,
                perturbed_output_mu,
                perturbed_output_sigma,
@@ -214,4 +237,4 @@ if __name__ == '__main__':
                best_distance,
                labels,
                targets,
-               params)
+               params)'''
