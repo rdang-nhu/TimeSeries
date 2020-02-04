@@ -124,7 +124,7 @@ class Net(nn.Module):
     def forward_log_prob(self, x, sample, v_batch, id_batch, hidden, cell):
 
         batch_size = x.shape[1]
-        log_prob = torch.ones( batch_size, device=self.params.device)
+        log_prob = torch.zeros( batch_size, device=self.params.device)
 
         decoder_hidden = hidden
         decoder_cell = cell
