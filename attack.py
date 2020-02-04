@@ -244,7 +244,7 @@ class Attack():
             perturbed_output_sigma = {"double": np.zeros(out_shape),
                                       "zero": np.zeros(out_shape)}
 
-            modes = ["double", "zero"]
+            modes = ["zero","double"]
             targets = {}
 
             lines = []
