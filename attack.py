@@ -389,6 +389,8 @@ class Attack():
 
             (test_batch, id_batch, v, labels) = self.test_loader.__getitem__(plot_batch)
 
+            print(v.shape)
+
             index = v[:,0] > 0
             test_batch = test_batch[index]
             id_batch = id_batch[index]
