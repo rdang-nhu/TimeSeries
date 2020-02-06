@@ -200,7 +200,7 @@ class Attack():
 
         #print("attack pert grad 2", attack_module.perturbation.grad[:, 0])
 
-        if i % 1000 == 0:
+        if i < 10 > == 0:
             print("Iteration", i)
             self.print(i,norm,distance,loss,norm_per_sample.shape[0])
 
@@ -287,8 +287,7 @@ class Attack():
                         if estimator == "ours":
                             self.attack_step_ours(attack_module, optimizer, k, batched_target)
                         elif estimator == "naive":
-                            with torch.autograd.detect_anomaly():
-                                self.attack_step_naive(attack_module, optimizer, k, batched_target)
+                            self.attack_step_naive(attack_module, optimizer, k, batched_target)
                         else:
                             raise Exception("No such estimator")
 

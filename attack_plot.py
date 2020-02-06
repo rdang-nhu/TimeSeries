@@ -23,6 +23,8 @@ def plot_quantiles(original_mu ,original_sigma,
 
     ref = original_mu["ours"][:, target_index]
 
+    print("ref",ref.shape)
+
     colors = ['r','b','black','green','yellow','brown','orange']
 
 
@@ -36,9 +38,16 @@ def plot_quantiles(original_mu ,original_sigma,
 
             values = perturbed_output_mu["ours"][mode][tolerance,:,target_index]
 
+            print("values",values.shape)
+
             normalized_values = values/ref
 
+
             quantiles = [ np.percentile(normalized_values,p) for p in percentages]
+
+
+            print(normalized_values)
+            print(quantiles)
 
             if mode == "zero":
                 plt.plot(percentages, np.flip(quantiles,axis=0), label=str_tol,color=color)
@@ -47,14 +56,20 @@ def plot_quantiles(original_mu ,original_sigma,
 
             values = perturbed_output_mu["naive"][mode][tolerance, :, target_index]
 
-            normalized_values = values / ref
+            print("values",values.shape)
+
+            '''normalized_values = values / ref
 
             quantiles = [np.percentile(normalized_values, p) for p in percentages]
+
+
+            print(normalized_values)
+            print(quantiles)
 
             if mode == "zero":
                 plt.plot(percentages, np.flip(quantiles, axis=0), linestyle="dashed",color=color)
             else:
-                plt.plot(percentages, quantiles, linestyle = "dashed",color=color)
+                plt.plot(percentages, quantiles, linestyle = "dashed",color=color)'''
 
     if mode == "zero":
         plt.xticks(percentages,np.flip(percentages,axis=0))
