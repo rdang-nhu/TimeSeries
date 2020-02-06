@@ -387,47 +387,46 @@ class Attack():
             # v ([batch_size, 2]): scaling factor for each window;
             # labels ([batch_size, train_window]): z_{1:T}.
 
-            for i, (test_batch, id_batch, v, labels) in enumerate(tqdm(self.test_loader)):
-                if i == plot_batch:
+            (test_batch, id_batch, v, labels) = self.test_set.__getitem__(plot_batch)
 
-                    index = v[:,0] > 0
-                    test_batch = test_batch[index]
-                    id_batch = id_batch[index]
-                    v = v[index]
-                    labels = labels[index]
+            index = v[:,0] > 0
+            test_batch = test_batch[index]
+            id_batch = id_batch[index]
+            v = v[index]
+            labels = labels[index]
 
-                    # Prepare batch data
-                    test_batch = test_batch.permute(1, 0, 2).to(torch.float32).to(params.device)
-                    id_batch = id_batch.unsqueeze(0).to(params.device)
-                    v_batch = v.to(torch.float32).to(params.device)
-                    test_labels = labels.to(torch.float32).to(params.device)[:,params.target]
+            # Prepare batch data
+            test_batch = test_batch.permute(1, 0, 2).to(torch.float32).to(params.device)
+            id_batch = id_batch.unsqueeze(0).to(params.device)
+            v_batch = v.to(torch.float32).to(params.device)
+            test_labels = labels.to(torch.float32).to(params.device)[:,params.target]
 
-                    #print(v_batch[:],torch.mean(labels,dim=0))
+            #print(v_batch[:],torch.mean(labels,dim=0))
 
-                    batch_size = test_batch.shape[1]
-                    hidden = model.init_hidden(batch_size)
-                    cell = model.init_cell(batch_size)
+            batch_size = test_batch.shape[1]
+            hidden = model.init_hidden(batch_size)
+            cell = model.init_cell(batch_size)
 
-                    #print("label",labels[0,:])
+            #print("label",labels[0,:])
 
-                    original_mu,original_sigma,best_c,best_perturbation,best_distance,\
-                        perturbed_output_mu, perturbed_output_sigma,targets, l = \
-                        self.attack_batch(test_batch,id_batch,v_batch,
-                                          test_labels,hidden,cell,estimator)
-                    lines += l
+            original_mu,original_sigma,best_c,best_perturbation,best_distance,\
+                perturbed_output_mu, perturbed_output_sigma,targets, l = \
+                self.attack_batch(test_batch,id_batch,v_batch,
+                                  test_labels,hidden,cell,estimator)
+            lines += l
 
-                    # Save results
-                    saver = attack_utils.H5pySaver(params.output_folder)
+            # Save results
+            saver = attack_utils.H5pySaver(params.output_folder)
 
-                    saver.save_to_file(original_mu,estimator+'_original_mu')
-                    saver.save_to_file(original_sigma, estimator+'_original_sigma')
-                    saver.save_dict_to_file(best_c,estimator+'_best_c')
-                    saver.save_dict_to_file(best_perturbation,estimator+'_best_perturbation')
-                    saver.save_dict_to_file(best_distance, estimator+'_best_distance')
-                    saver.save_dict_to_file(perturbed_output_mu, estimator+'_perturbed_output_mu')
-                    saver.save_dict_to_file(perturbed_output_sigma, estimator+'_perturbed_output_sigma')
-                    saver.save_dict_to_file(targets, estimator+'_targets')
-                    saver.save_to_file(labels, estimator+'_labels')
+            saver.save_to_file(original_mu,estimator+'_original_mu')
+            saver.save_to_file(original_sigma, estimator+'_original_sigma')
+            saver.save_dict_to_file(best_c,estimator+'_best_c')
+            saver.save_dict_to_file(best_perturbation,estimator+'_best_perturbation')
+            saver.save_dict_to_file(best_distance, estimator+'_best_distance')
+            saver.save_dict_to_file(perturbed_output_mu, estimator+'_perturbed_output_mu')
+            saver.save_dict_to_file(perturbed_output_sigma, estimator+'_perturbed_output_sigma')
+            saver.save_dict_to_file(targets, estimator+'_targets')
+            saver.save_to_file(labels, estimator+'_labels')
 
         df = pd.DataFrame(lines,columns=["estimator","mode","c","norm","distance"])
         df.to_csv(os.path.join(params.output_folder,"results.csv"))
@@ -450,7 +449,7 @@ if __name__ == '__main__':
     utils.load_checkpoint(os.path.join(model_dir, args.restore_file + '.pth.tar'), model)
 
 
-    attack = Attack(model, loss_fn, test_loader, params, -1,)
+    attack = Attack(model, loss_fn, test_set, params, -1,)
 
 
     test_metrics = attack.attack()
