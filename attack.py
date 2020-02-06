@@ -387,7 +387,7 @@ class Attack():
             # v ([batch_size, 2]): scaling factor for each window;
             # labels ([batch_size, train_window]): z_{1:T}.
 
-            (test_batch, id_batch, v, labels) = self.test_set.__getitem__(plot_batch)
+            (test_batch, id_batch, v, labels) = self.test_loader.__getitem__(plot_batch)
 
             index = v[:,0] > 0
             test_batch = test_batch[index]
